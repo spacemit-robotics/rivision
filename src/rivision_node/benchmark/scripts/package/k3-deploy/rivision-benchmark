@@ -1,0 +1,14 @@
+#!/bin/bash
+# ============================================================
+# RiVision Benchmark 启动器 (K3 RISC-V)
+# 自动设置库路径，无需手动配置环境变量
+# ============================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BENCHMARK_ROOT="$SCRIPT_DIR"
+
+# 自动设置库路径
+export LD_LIBRARY_PATH="$BENCHMARK_ROOT/lib:$LD_LIBRARY_PATH"
+
+# 执行 benchmark
+exec "$BENCHMARK_ROOT/bin/rivision-benchmark.riscv64" "$@"

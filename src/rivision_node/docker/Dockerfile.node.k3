@@ -1,0 +1,109 @@
+# RiVision Node Docker (K3 RISC-V)
+# llama.cpp 推理服务 + Node Agent 合并容器
+#
+# 架构:
+#   supervisord 管理两个进程:
+#   - llama-server: 多模态推理服务 (端口 9080)
+#   - node-agent:   节点代理服务   (端口 9090)
+#
+# 前置条件:
+#   K3 上先编译 llama.cpp: scripts/build.sh
+#   编译产物在: llama.cpp/build-k3/bin/
+#
+# 构建:
+#   docker build -t rivision-node -f docker/Dockerfile.node.k3 .
+#
+# 默认模型 (fastvlm-0.5b-q8) 内置于镜像，高级用户可通过 volume 覆盖
+
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# ─── 系统依赖 ───────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    supervisor \
+    wget curl \
+    procps \
+    util-linux \
+    libgomp1 \
+    gcc python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── Python 依赖 (Node Agent, pydantic v1 兼容) ────────────
+COPY node-agent/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.txt
+
+# ─── Node Agent 编译发布 ──────────────────────────────────────
+COPY node-agent/ /app/node-agent/
+# 编译为 .pyc 字节码并删除 .py 源文件（-b 选项将 .pyc 放在源文件同目录）
+RUN python -m compileall -b /app/node-agent/ \
+    && find /app/node-agent/ -name "*.py" -delete
+
+# ─── 脚本和配置 ─────────────────────────────────────────────
+COPY scripts/ /app/scripts/
+COPY config/ /app/config/
+# 保留默认配置副本 (volume 挂载会覆盖 /app/config, entrypoint 会从此处恢复)
+COPY config/ /app/config.default/
+RUN chmod +x /app/scripts/*.sh
+
+# ─── llama.cpp 预编译二进制 ─────────────────────────────────
+# 从 K3 原生编译产物复制 (scripts/build.sh 生成)
+# 注意: 需先在 K3 上运行 scripts/build.sh 编译
+COPY llama.cpp/build-k3/bin/ /app/llama.cpp/build-k3/bin/
+RUN chmod +x /app/llama.cpp/build-k3/bin/llama-* 2>/dev/null || true \
+    && ldconfig /app/llama.cpp/build-k3/bin/
+
+# ─── Docker 适配: systemctl → supervisorctl 映射 ───────────
+# node-agent 的 process_manager.py 调用 sudo systemctl 管理 llama 进程
+# 在 Docker 中用 supervisorctl 替代，无需修改 Python 代码
+COPY docker/systemctl-wrapper.sh /usr/local/bin/systemctl
+COPY docker/sudo-wrapper.sh /usr/local/bin/sudo
+RUN chmod +x /usr/local/bin/systemctl /usr/local/bin/sudo
+
+# ─── Supervisord 配置 ──────────────────────────────────────
+COPY docker/supervisord-node.conf /etc/supervisor/conf.d/rivision-node.conf
+
+# ─── 入口脚本 ──────────────────────────────────────────────
+COPY docker/entrypoint-node.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# ─── 默认模型文件 (内置于镜像) ────────────────────────────
+# 推荐默认: FastVLM 0.5B Q8 (eval 26.4tok/s, PE 21.9tok/s)
+# 高级用户可通过 volume 挂载 /app/models 覆盖
+COPY models/fastvlm-0.5b-q8_0.gguf /app/models/
+COPY models/fastvlm-0.5b-mmproj-f16.gguf /app/models/
+
+# ─── 创建目录 ──────────────────────────────────────────────
+RUN mkdir -p /app/logs /app/data
+
+# ─── 健康检查 ──────────────────────────────────────────────
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
+    CMD curl -sf http://localhost:9090/api/v1/health || exit 1
+
+EXPOSE 9080 9090
+
+# ─── 环境变量默认值 ────────────────────────────────────────
+ENV LD_LIBRARY_PATH="/app/llama.cpp/build-k3/bin" \
+    NODE_ID="" \
+    GATEWAY_URL="http://192.168.122.1:8081" \
+    REGISTRATION_TOKEN="" \
+    NODE_HOST="auto" \
+    NODE_TAGS="riscv,k3,docker" \
+    AGENT_HOST="0.0.0.0" \
+    AGENT_PORT="9090" \
+    LLAMA_PORT="9080" \
+    LLAMA_THREADS="8" \
+    LLAMA_BATCH_THREADS="8" \
+    LLAMA_CPU_AFFINITY="" \
+    LLAMA_CTX_SIZE="4096" \
+    LLAMA_PARALLEL="1" \
+    LLAMA_FLASH_ATTN="true" \
+    LLAMA_BUILD_DIR="/app/llama.cpp/build-k3" \
+    HEARTBEAT_INTERVAL="10" \
+    LOG_LEVEL="INFO" \
+    LOG_ENABLE="true" \
+    LOG_FILE="/app/logs/node-agent.log" \
+    DEFAULT_MODEL="fastvlm-0.5b-q8"
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/rivision-node.conf"]

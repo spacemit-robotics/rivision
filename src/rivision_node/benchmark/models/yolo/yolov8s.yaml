@@ -1,0 +1,44 @@
+# YOLOv8s 模型配置
+
+name: yolov8s
+family: yolov8
+size: s
+description: "YOLOv8 Small - 平衡速度和精度的 YOLOv8 模型"
+
+input:
+  width: 640
+  height: 640
+  channels: 3
+  format: NCHW
+
+inference:
+  conf_threshold: 0.25
+  nms_threshold: 0.45
+  max_detections: 100
+  num_classes: 80
+
+platform_models:
+  x86:
+    file: yolov8s.onnx
+    provider: CPUExecutionProvider
+  riscv_b:
+    file: yolov8s.onnx
+    provider: SpacemiTNPUExecutionProvider
+  arm_gpu:
+    file: yolov8s.engine
+    provider: TensorRTExecutionProvider
+    precision: fp16
+
+expected_performance:
+  x86:
+    fps_min: 50
+    fps_max: 80
+    latency_avg_ms: 15
+  riscv_b:
+    fps_min: 30
+    fps_max: 50
+    latency_avg_ms: 25
+  arm_gpu:
+    fps_min: 150
+    fps_max: 250
+    latency_avg_ms: 5

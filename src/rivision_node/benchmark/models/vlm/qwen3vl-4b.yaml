@@ -1,0 +1,91 @@
+# Qwen3VL-4B 模型配置
+
+name: qwen3vl-4b
+family: qwen3vl
+size: "4B"
+quantization: Q4_K_M
+description: "Qwen3 Vision-Language 4B 参数模型"
+
+# ================================================
+# 模型文件
+# ================================================
+files:
+  model: Qwen3VL-4B-Instruct-Q4_K_M.gguf
+  mmproj: mmproj-Qwen3VL-4B-Instruct-F16.gguf
+  # 或使用 smt 后端 (K3 NPU)
+  smt_config: Qwen3VL/
+
+# ================================================
+# 推理参数
+# ================================================
+inference:
+  context_length: 4096
+  max_tokens: 512
+  temperature: 0.3
+  top_p: 0.9
+  top_k: 40
+  seed: 42
+  repeat_penalty: 1.1
+  
+  # 默认提示词
+  default_prompt: "简要描述图片内容"
+  system_prompt: "你是一个图像分析助手，请准确描述图片中的内容。"
+
+# ================================================
+# 平台配置
+# ================================================
+platform_config:
+  x86:
+    threads: 8
+    batch_size: 1
+    cache_type_k: q8_0
+    cache_type_v: q8_0
+    extra_args: ""
+  
+  riscv_b:
+    threads: 6
+    batch_size: 1
+    media_backend: smt
+    smt_config_dir: "${MODEL_DIR}/Qwen3VL"
+    cache_type_k: q8_0
+    cache_type_v: q8_0
+    extra_args: "--no-warmup"
+  
+  arm_gpu:
+    threads: 4
+    n_gpu_layers: -1
+    cuda_device: 0
+    flash_attention: true
+    extra_args: "--flash-attn"
+
+# ================================================
+# 平台兼容性
+# ================================================
+compatibility:
+  supported_platforms: [x86, riscv_b, arm_gpu]
+  min_memory_gb: 6
+
+# ================================================
+# 预期性能 (参考值)
+# ================================================
+expected_performance:
+  x86:
+    tokens_per_sec_min: 6
+    tokens_per_sec_max: 12
+    vision_encode_ms: 500
+    ttft_ms: 600
+    total_time_sec: 50
+  
+  riscv_b:
+    tokens_per_sec_min: 4
+    tokens_per_sec_max: 6
+    vision_encode_ms: 350
+    ttft_ms: 450
+    total_time_sec: 90
+  
+  arm_gpu:
+    tokens_per_sec_min: 40
+    tokens_per_sec_max: 60
+    vision_encode_ms: 100
+    ttft_ms: 130
+    total_time_sec: 10

@@ -1,0 +1,1437 @@
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/go.mod /tmp/rivision_owl_backup/onvif-go/go.mod
+--- src/rivision_owl/onvif-go/go.mod	2026-04-29 09:34:14.645001352 +0800
++++ /tmp/rivision_owl_backup/onvif-go/go.mod	2026-04-11 22:57:15.000000000 +0800
+@@ -1,15 +1,15 @@
+ module github.com/0x524a/onvif-go
+ 
+-go 1.24
++go 1.25.0
+ 
+-toolchain go1.24.5
+-
+-require github.com/0x524A/rtspeek v0.0.1
++require (
++	github.com/0x524A/rtspeek v0.0.1
++	golang.org/x/net v0.53.0
++)
+ 
+ require (
+ 	github.com/bluenviron/gortsplib/v4 v4.16.2 // indirect
+ 	github.com/bluenviron/mediacommon/v2 v2.4.1 // indirect
+-	github.com/fzipp/gocyclo v0.6.0 // indirect
+ 	github.com/google/uuid v1.6.0 // indirect
+ 	github.com/mattn/go-colorable v0.1.13 // indirect
+ 	github.com/mattn/go-isatty v0.0.19 // indirect
+@@ -21,6 +21,5 @@
+ 	github.com/pion/srtp/v3 v3.0.6 // indirect
+ 	github.com/pion/transport/v3 v3.0.7 // indirect
+ 	github.com/rs/zerolog v1.34.0 // indirect
+-	golang.org/x/net v0.43.0 // indirect
+-	golang.org/x/sys v0.35.0 // indirect
++	golang.org/x/sys v0.43.0 // indirect
+ )
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/go.sum /tmp/rivision_owl_backup/onvif-go/go.sum
+--- src/rivision_owl/onvif-go/go.sum	2026-04-29 09:34:14.645001352 +0800
++++ /tmp/rivision_owl_backup/onvif-go/go.sum	2026-04-11 22:57:15.000000000 +0800
+@@ -7,8 +7,6 @@
+ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
+ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+-github.com/fzipp/gocyclo v0.6.0 h1:lsblElZG7d3ALtGMx9fmxeTKZaLLpU8mET09yN4BBLo=
+-github.com/fzipp/gocyclo v0.6.0/go.mod h1:rXPyn8fnlpa0R2csP/31uerbiVBugk5whMdlyaLkLoA=
+ github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
+ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+ github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+@@ -39,12 +37,12 @@
+ github.com/rs/zerolog v1.34.0/go.mod h1:bJsvje4Z08ROH4Nhs5iH600c3IkWhwp44iRc54W6wYQ=
+ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+ github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+-golang.org/x/net v0.43.0 h1:lat02VYK2j4aLzMzecihNvTlJNQUq316m2Mr9rnM6YE=
+-golang.org/x/net v0.43.0/go.mod h1:vhO1fvI4dGsIjh73sWfUVjj3N7CA9WkKJNQm2svM6Jg=
++golang.org/x/net v0.53.0 h1:d+qAbo5L0orcWAr0a9JweQpjXF19LMXJE8Ey7hwOdUA=
++golang.org/x/net v0.53.0/go.mod h1:JvMuJH7rrdiCfbeHoo3fCQU24Lf5JJwT9W3sJFulfgs=
+ golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
+-golang.org/x/sys v0.35.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
++golang.org/x/sys v0.43.0 h1:Rlag2XtaFTxp19wS8MXlJwTvoh8ArU6ezoyFsMyCTNI=
++golang.org/x/sys v0.43.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
+ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+ gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/internal/soap/soap.go /tmp/rivision_owl_backup/onvif-go/internal/soap/soap.go
+--- src/rivision_owl/onvif-go/internal/soap/soap.go	2026-04-29 09:34:14.645999054 +0800
++++ /tmp/rivision_owl_backup/onvif-go/internal/soap/soap.go	2026-04-12 11:32:21.000000000 +0800
+@@ -23,13 +23,14 @@
+ 
+ // Header represents a SOAP header.
+ type Header struct {
+-	Security *Security `xml:"Security,omitempty"`
++	Security *Security `xml:"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd Security,omitempty"`
+ }
+ 
+ // Body represents a SOAP body.
+ type Body struct {
+-	Content interface{} `xml:",omitempty"`
+-	Fault   *Fault      `xml:"Fault,omitempty"`
++	Content  interface{} `xml:",omitempty"`
++	RawXML   []byte      `xml:",innerxml"` // Captures raw XML content for server-side parsing
++	Fault    *Fault      `xml:"Fault,omitempty"`
+ }
+ 
+ // Fault represents a SOAP fault.
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/server/discovery.go /tmp/rivision_owl_backup/onvif-go/server/discovery.go
+--- src/rivision_owl/onvif-go/server/discovery.go	1970-01-01 08:00:00.000000000 +0800
++++ /tmp/rivision_owl_backup/onvif-go/server/discovery.go	2026-04-12 11:38:47.000000000 +0800
+@@ -0,0 +1,648 @@
++// Package server provides ONVIF server implementation for testing and simulation.
++// This file implements WS-Discovery 1.1 responder for ONVIF device discovery.
++package server
++
++import (
++	"context"
++	"crypto/rand"
++	"encoding/xml"
++	"fmt"
++	"log"
++	"net"
++	"strings"
++	"sync"
++	"time"
++
++	"golang.org/x/net/ipv4"
++)
++
++// WS-Discovery constants per WS-Discovery 1.1 specification
++const (
++	// WSDiscoveryMulticastAddr is the IPv4 multicast address for WS-Discovery
++	WSDiscoveryMulticastAddr = "239.255.255.250:3702"
++
++	// WS-Discovery actions
++	wsaProbeAction      = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe"
++	wsaProbeMatchAction = "http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches"
++	wsaHelloAction      = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello"
++	wsaByeAction        = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye"
++
++	// WS-Discovery anonymous address
++	wsaAnonymousAddr = "http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous"
++
++	// ONVIF device types
++	onvifNetworkVideoTransmitter = "dn:NetworkVideoTransmitter"
++	onvifDevice                  = "tds:Device"
++
++	// Default metadata version
++	defaultMetadataVersion = 1
++
++	// UDP buffer size
++	udpBufferSize = 8192
++
++	// Discovery response delay (random 0-500ms per spec)
++	maxResponseDelayMs = 500
++)
++
++// DiscoveryResponder handles WS-Discovery probe requests and responses.
++type DiscoveryResponder struct {
++	server          *Server
++	conn            *net.UDPConn
++	running         bool
++	mutex           sync.RWMutex
++	deviceUUID      string
++	metadataVersion int
++	scopes          []string
++	xAddrs          []string
++}
++
++// DiscoveryConfig contains configuration for the discovery responder.
++type DiscoveryConfig struct {
++	// NetworkInterface specifies which interface to listen on (empty = all)
++	NetworkInterface string
++	// Scopes contains ONVIF scope URIs
++	Scopes []string
++	// DeviceUUID is the unique device identifier (auto-generated if empty)
++	DeviceUUID string
++}
++
++// NewDiscoveryResponder creates a new WS-Discovery responder.
++func NewDiscoveryResponder(server *Server, config *DiscoveryConfig) (*DiscoveryResponder, error) {
++	if config == nil {
++		config = &DiscoveryConfig{}
++	}
++
++	// Generate device UUID if not provided
++	deviceUUID := config.DeviceUUID
++	if deviceUUID == "" {
++		deviceUUID = generateDeviceUUID()
++	}
++
++	// Build XAddrs (device service addresses)
++	xAddrs := buildXAddrs(server.config)
++
++	// Build scopes
++	scopes := config.Scopes
++	if len(scopes) == 0 {
++		scopes = buildDefaultScopes(server.config)
++	}
++
++	return &DiscoveryResponder{
++		server:          server,
++		deviceUUID:      deviceUUID,
++		metadataVersion: defaultMetadataVersion,
++		scopes:          scopes,
++		xAddrs:          xAddrs,
++	}, nil
++}
++
++// Start begins listening for WS-Discovery probe requests.
++func (d *DiscoveryResponder) Start(ctx context.Context) error {
++	d.mutex.Lock()
++	if d.running {
++		d.mutex.Unlock()
++		return fmt.Errorf("discovery responder already running")
++	}
++	d.running = true
++	d.mutex.Unlock()
++
++	// Create UDP socket listening on multicast port
++	conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero, Port: 3702})
++	if err != nil {
++		return fmt.Errorf("failed to listen on UDP port 3702: %w", err)
++	}
++	d.conn = conn
++
++	// Create packet conn for multicast operations
++	p := ipv4.NewPacketConn(conn)
++
++	// Join multicast group on all suitable interfaces
++	group := net.IPv4(239, 255, 255, 250)
++	interfaces, _ := net.Interfaces()
++	joinedCount := 0
++	for _, iface := range interfaces {
++		if iface.Flags&net.FlagUp == 0 {
++			continue
++		}
++		// Skip loopback but allow all other interfaces including VPN/tunnel
++		if iface.Flags&net.FlagLoopback != 0 {
++			continue
++		}
++		// Try to join even if FlagMulticast is not set (some interfaces report incorrectly)
++		if err := p.JoinGroup(&iface, &net.UDPAddr{IP: group}); err != nil {
++			log.Printf("Debug: failed to join multicast on %s: %v", iface.Name, err)
++		} else {
++			log.Printf("Debug: joined multicast on %s", iface.Name)
++			joinedCount++
++		}
++	}
++
++	if joinedCount == 0 {
++		log.Printf("Warning: failed to join multicast on any interface")
++	}
++
++	// Set read buffer size
++	if err := conn.SetReadBuffer(udpBufferSize); err != nil {
++		log.Printf("Warning: failed to set read buffer: %v", err)
++	}
++
++	// Send Hello message on startup
++	if err := d.sendHello(); err != nil {
++		log.Printf("Warning: failed to send Hello message: %v", err)
++	}
++
++	fmt.Printf("🔍 WS-Discovery responder started on %s\n", WSDiscoveryMulticastAddr)
++	fmt.Printf("   UUID: urn:uuid:%s\n", d.deviceUUID)
++	fmt.Printf("   XAddrs: %s\n", strings.Join(d.xAddrs, " "))
++
++	// Start listening goroutine
++	go d.listenLoop(ctx)
++
++	return nil
++}
++
++// Stop stops the discovery responder.
++func (d *DiscoveryResponder) Stop() error {
++	d.mutex.Lock()
++	defer d.mutex.Unlock()
++
++	if !d.running {
++		return nil
++	}
++
++	d.running = false
++
++	// Send Bye message before closing
++	if d.conn != nil {
++		_ = d.sendBye()
++		_ = d.conn.Close()
++	}
++
++	fmt.Println("🔍 WS-Discovery responder stopped")
++	return nil
++}
++
++// listenLoop continuously listens for probe requests.
++func (d *DiscoveryResponder) listenLoop(ctx context.Context) {
++	buffer := make([]byte, udpBufferSize)
++
++	for {
++		select {
++		case <-ctx.Done():
++			_ = d.Stop()
++			return
++		default:
++			// Set read deadline to allow periodic context checks
++			if err := d.conn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
++				continue
++			}
++
++			n, remoteAddr, err := d.conn.ReadFromUDP(buffer)
++			if err != nil {
++				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
++					continue // Timeout is expected, check context and continue
++				}
++				d.mutex.RLock()
++				running := d.running
++				d.mutex.RUnlock()
++				if !running {
++					return
++				}
++				continue
++			}
++
++			// Handle probe request
++			go d.handleProbe(buffer[:n], remoteAddr)
++		}
++	}
++}
++
++// handleProbe processes an incoming WS-Discovery probe request.
++func (d *DiscoveryResponder) handleProbe(data []byte, remoteAddr *net.UDPAddr) {
++	// Ignore packets from port 3702 (our own messages echoed back via multicast)
++	if remoteAddr.Port == 3702 {
++		return
++	}
++
++	log.Printf("🔍 Received UDP packet from %s (%d bytes)", remoteAddr, len(data))
++
++	// Parse the probe message
++	probe, err := parseProbeMessage(data)
++	if err != nil {
++		log.Printf("🔍 Not a valid probe message: %v", err)
++		return
++	}
++
++	log.Printf("🔍 Valid Probe received: MessageID=%s, Types=%s", probe.MessageID, probe.Types)
++
++	// Check if probe matches our device type
++	if !d.matchesProbe(probe) {
++		log.Printf("🔍 Probe does not match our device type")
++		return
++	}
++
++	log.Printf("🔍 Probe matches, preparing response...")
++
++	// Add small random delay per WS-Discovery spec (0-100ms for faster response)
++	delay := time.Duration(randInt(100)) * time.Millisecond
++	time.Sleep(delay)
++
++	// Build and send ProbeMatch response
++	response := d.buildProbeMatchResponse(probe.MessageID)
++
++	log.Printf("🔍 Sending ProbeMatch to %s (%d bytes)", remoteAddr, len(response))
++
++	// Create a new UDP socket to send response from the correct interface
++	// This ensures the response comes from the same network as the probe
++	respConn, err := net.DialUDP("udp4", nil, remoteAddr)
++	if err != nil {
++		log.Printf("Failed to create response socket: %v", err)
++		// Fallback to original method
++		if _, err := d.conn.WriteToUDP(response, remoteAddr); err != nil {
++			log.Printf("Failed to send ProbeMatch: %v", err)
++		}
++		return
++	}
++	defer respConn.Close()
++
++	if _, err := respConn.Write(response); err != nil {
++		log.Printf("Failed to send ProbeMatch: %v", err)
++	} else {
++		log.Printf("🔍 ProbeMatch sent successfully to %s from %s", remoteAddr, respConn.LocalAddr())
++	}
++}
++
++// matchesProbe checks if the probe request matches this device.
++func (d *DiscoveryResponder) matchesProbe(probe *wsDiscoveryProbe) bool {
++	// If no types specified, match all ONVIF devices
++	if probe.Types == "" {
++		return true
++	}
++
++	types := strings.ToLower(probe.Types)
++
++	// Match ONVIF device types
++	if strings.Contains(types, "networkvideotransmitter") ||
++		strings.Contains(types, "device") ||
++		strings.Contains(types, "networkvideoanalyzer") {
++		return true
++	}
++
++	return false
++}
++
++// sendHello sends a WS-Discovery Hello message to announce device presence.
++func (d *DiscoveryResponder) sendHello() error {
++	hello := d.buildHelloMessage()
++	return d.sendMulticast(hello)
++}
++
++// sendBye sends a WS-Discovery Bye message before shutting down.
++func (d *DiscoveryResponder) sendBye() error {
++	bye := d.buildByeMessage()
++	return d.sendMulticast(bye)
++}
++
++// sendMulticast sends a message to the WS-Discovery multicast address.
++func (d *DiscoveryResponder) sendMulticast(data []byte) error {
++	addr, err := net.ResolveUDPAddr("udp4", WSDiscoveryMulticastAddr)
++	if err != nil {
++		return err
++	}
++	_, err = d.conn.WriteToUDP(data, addr)
++	return err
++}
++
++// WS-Discovery XML structures
++
++type wsDiscoveryProbe struct {
++	MessageID string
++	Types     string
++	Scopes    string
++}
++
++type wsDiscoveryEnvelope struct {
++	XMLName xml.Name `xml:"Envelope"`
++	Header  struct {
++		// Support both namespaced and non-namespaced Action
++		Action    string `xml:"Action"`
++		MessageID string `xml:"MessageID"`
++		To        string `xml:"To"`
++		ReplyTo   struct {
++			Address string `xml:"Address"`
++		} `xml:"ReplyTo"`
++		RelatesTo string `xml:"RelatesTo"`
++	} `xml:"Header"`
++	Body struct {
++		Probe struct {
++			XMLName xml.Name `xml:"Probe"`
++			Types   string   `xml:"Types"`
++			Scopes  string   `xml:"Scopes"`
++		}
++		ProbeMatches struct {
++			ProbeMatch struct {
++				EndpointReference struct {
++					Address string `xml:"Address"`
++				} `xml:"EndpointReference"`
++				Types           string `xml:"Types"`
++				Scopes          string `xml:"Scopes"`
++				XAddrs          string `xml:"XAddrs"`
++				MetadataVersion int    `xml:"MetadataVersion"`
++			} `xml:"ProbeMatch"`
++		} `xml:"ProbeMatches"`
++	} `xml:"Body"`
++}
++
++// parseProbeMessage parses a WS-Discovery probe message.
++func parseProbeMessage(data []byte) (*wsDiscoveryProbe, error) {
++	xmlStr := string(data)
++
++	// Check if it's a Probe message by looking for the action in the raw XML
++	if !strings.Contains(xmlStr, "discovery/Probe") {
++		return nil, fmt.Errorf("not a Probe message")
++	}
++
++	// Extract MessageID using simple string parsing (handles namespace prefixes)
++	messageID := extractXMLValue(xmlStr, "MessageID")
++	if messageID == "" {
++		return nil, fmt.Errorf("no MessageID found")
++	}
++
++	// Extract Types if present
++	types := extractXMLValue(xmlStr, "Types")
++
++	return &wsDiscoveryProbe{
++		MessageID: messageID,
++		Types:     types,
++		Scopes:    extractXMLValue(xmlStr, "Scopes"),
++	}, nil
++}
++
++// extractXMLValue extracts a value from XML, handling namespace prefixes.
++func extractXMLValue(xml, tagName string) string {
++	// Look for patterns like <a:TagName>value</a:TagName> or <TagName>value</TagName>
++	patterns := []string{
++		":" + tagName + ">",
++		"<" + tagName + ">",
++		"<" + tagName + " ",
++	}
++
++	for _, pattern := range patterns {
++		idx := strings.Index(xml, pattern)
++		if idx == -1 {
++			continue
++		}
++
++		// Find the start of the value
++		start := idx + len(pattern)
++		if strings.HasSuffix(pattern, " ") {
++			// Handle attributes - find the closing >
++			closeIdx := strings.Index(xml[start:], ">")
++			if closeIdx == -1 {
++				continue
++			}
++			start = start + closeIdx + 1
++		}
++
++		// Find the end tag
++		endTag := "</" 
++		endIdx := strings.Index(xml[start:], endTag)
++		if endIdx == -1 {
++			continue
++		}
++
++		value := xml[start : start+endIdx]
++		// Clean up any nested tags
++		if closeIdx := strings.Index(value, "<"); closeIdx != -1 {
++			value = value[:closeIdx]
++		}
++		return strings.TrimSpace(value)
++	}
++	return ""
++}
++
++// buildProbeMatchResponse builds a WS-Discovery ProbeMatches response.
++// Note: gowvp/onvif uses etree with path "./Body/ProbeMatches/ProbeMatch/XAddrs"
++// which requires elements WITHOUT namespace prefixes in the local name.
++func (d *DiscoveryResponder) buildProbeMatchResponse(relatesToID string) []byte {
++	messageID := fmt.Sprintf("urn:uuid:%s", generateMessageUUID())
++
++	// Use default namespace for SOAP envelope to avoid prefix issues with etree parsing
++	response := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
++<Envelope xmlns="http://www.w3.org/2003/05/soap-envelope" xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery" xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
++<Header>
++<wsa:Action>%s</wsa:Action>
++<wsa:MessageID>%s</wsa:MessageID>
++<wsa:RelatesTo>%s</wsa:RelatesTo>
++<wsa:To>%s</wsa:To>
++</Header>
++<Body>
++<ProbeMatches xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery">
++<ProbeMatch>
++<wsa:EndpointReference><wsa:Address>urn:uuid:%s</wsa:Address></wsa:EndpointReference>
++<Types xmlns:dp0="http://www.onvif.org/ver10/network/wsdl">dp0:NetworkVideoTransmitter</Types>
++<Scopes>%s</Scopes>
++<XAddrs>%s</XAddrs>
++<MetadataVersion>%d</MetadataVersion>
++</ProbeMatch>
++</ProbeMatches>
++</Body>
++</Envelope>`,
++		wsaProbeMatchAction,
++		messageID,
++		relatesToID,
++		wsaAnonymousAddr,
++		d.deviceUUID,
++		strings.Join(d.scopes, " "),
++		strings.Join(d.xAddrs, " "),
++		d.metadataVersion)
++
++	return []byte(response)
++}
++
++// buildHelloMessage builds a WS-Discovery Hello message.
++func (d *DiscoveryResponder) buildHelloMessage() []byte {
++	messageID := fmt.Sprintf("urn:uuid:%s", generateMessageUUID())
++
++	hello := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
++<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" 
++            xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"
++            xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
++            xmlns:dn="http://www.onvif.org/ver10/network/wsdl"
++            xmlns:tds="http://www.onvif.org/ver10/device/wsdl">
++  <s:Header>
++    <a:Action s:mustUnderstand="1">%s</a:Action>
++    <a:MessageID>%s</a:MessageID>
++    <a:To s:mustUnderstand="1">urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
++  </s:Header>
++  <s:Body>
++    <d:Hello>
++      <a:EndpointReference>
++        <a:Address>urn:uuid:%s</a:Address>
++      </a:EndpointReference>
++      <d:Types>%s %s</d:Types>
++      <d:Scopes>%s</d:Scopes>
++      <d:XAddrs>%s</d:XAddrs>
++      <d:MetadataVersion>%d</d:MetadataVersion>
++    </d:Hello>
++  </s:Body>
++</s:Envelope>`,
++		wsaHelloAction,
++		messageID,
++		d.deviceUUID,
++		onvifNetworkVideoTransmitter,
++		onvifDevice,
++		strings.Join(d.scopes, " "),
++		strings.Join(d.xAddrs, " "),
++		d.metadataVersion)
++
++	return []byte(hello)
++}
++
++// buildByeMessage builds a WS-Discovery Bye message.
++func (d *DiscoveryResponder) buildByeMessage() []byte {
++	messageID := fmt.Sprintf("urn:uuid:%s", generateMessageUUID())
++
++	bye := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
++<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" 
++            xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"
++            xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery">
++  <s:Header>
++    <a:Action s:mustUnderstand="1">%s</a:Action>
++    <a:MessageID>%s</a:MessageID>
++    <a:To s:mustUnderstand="1">urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
++  </s:Header>
++  <s:Body>
++    <d:Bye>
++      <a:EndpointReference>
++        <a:Address>urn:uuid:%s</a:Address>
++      </a:EndpointReference>
++    </d:Bye>
++  </s:Body>
++</s:Envelope>`,
++		wsaByeAction,
++		messageID,
++		d.deviceUUID)
++
++	return []byte(bye)
++}
++
++// Helper functions
++
++// generateDeviceUUID generates a random UUID for the device.
++func generateDeviceUUID() string {
++	b := make([]byte, 16)
++	_, _ = rand.Read(b)
++	// Set version (4) and variant (2) bits
++	b[6] = (b[6] & 0x0f) | 0x40
++	b[8] = (b[8] & 0x3f) | 0x80
++	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
++}
++
++// generateMessageUUID generates a random UUID for message IDs.
++func generateMessageUUID() string {
++	return generateDeviceUUID()
++}
++
++// randInt generates a random integer between 0 and max.
++func randInt(max int) int {
++	if max <= 0 {
++		return 0
++	}
++	b := make([]byte, 2)
++	_, _ = rand.Read(b)
++	return (int(b[0])<<8 | int(b[1])) % max
++}
++
++// buildXAddrs builds the XAddrs (device service URLs) from server config.
++func buildXAddrs(config *Config) []string {
++	// Get local IP addresses
++	localIPs := getLocalIPs()
++
++	var xAddrs []string
++	for _, ip := range localIPs {
++		addr := fmt.Sprintf("http://%s:%d%s/device_service", ip, config.Port, config.BasePath)
++		xAddrs = append(xAddrs, addr)
++	}
++
++	// If no local IPs found, use configured host
++	if len(xAddrs) == 0 {
++		host := config.Host
++		if host == "0.0.0.0" || host == "" {
++			host = "localhost"
++		}
++		xAddrs = append(xAddrs, fmt.Sprintf("http://%s:%d%s/device_service",
++			host, config.Port, config.BasePath))
++	}
++
++	return xAddrs
++}
++
++// buildDefaultScopes builds default ONVIF scopes from server config.
++func buildDefaultScopes(config *Config) []string {
++	return []string{
++		"onvif://www.onvif.org/type/video_encoder",
++		"onvif://www.onvif.org/type/ptz",
++		"onvif://www.onvif.org/Profile/Streaming",
++		fmt.Sprintf("onvif://www.onvif.org/name/%s", config.DeviceInfo.Model),
++		fmt.Sprintf("onvif://www.onvif.org/location/%s", "Virtual"),
++		fmt.Sprintf("onvif://www.onvif.org/hardware/%s", config.DeviceInfo.HardwareID),
++	}
++}
++
++// getLocalIPs returns all non-loopback IPv4 addresses.
++func getLocalIPs() []string {
++	var ips []string
++
++	interfaces, err := net.Interfaces()
++	if err != nil {
++		return ips
++	}
++
++	for _, iface := range interfaces {
++		// Skip down, loopback, and non-multicast interfaces
++		if iface.Flags&net.FlagUp == 0 ||
++			iface.Flags&net.FlagLoopback != 0 {
++			continue
++		}
++
++		addrs, err := iface.Addrs()
++		if err != nil {
++			continue
++		}
++
++		for _, addr := range addrs {
++			var ip net.IP
++			switch v := addr.(type) {
++			case *net.IPNet:
++				ip = v.IP
++			case *net.IPAddr:
++				ip = v.IP
++			}
++
++			// Only IPv4, non-loopback
++			if ip == nil || ip.IsLoopback() || ip.To4() == nil {
++				continue
++			}
++
++			ips = append(ips, ip.String())
++		}
++	}
++
++	return ips
++}
++
++// GetDeviceUUID returns the device UUID.
++func (d *DiscoveryResponder) GetDeviceUUID() string {
++	return d.deviceUUID
++}
++
++// GetXAddrs returns the device XAddrs.
++func (d *DiscoveryResponder) GetXAddrs() []string {
++	return d.xAddrs
++}
++
++// GetScopes returns the device scopes.
++func (d *DiscoveryResponder) GetScopes() []string {
++	return d.scopes
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/server/event.go /tmp/rivision_owl_backup/onvif-go/server/event.go
+--- src/rivision_owl/onvif-go/server/event.go	1970-01-01 08:00:00.000000000 +0800
++++ /tmp/rivision_owl_backup/onvif-go/server/event.go	2026-04-11 22:47:40.000000000 +0800
+@@ -0,0 +1,396 @@
++// Package server provides ONVIF server implementation for testing and simulation.
++// This file implements ONVIF Event Service with PullPoint subscription.
++package server
++
++import (
++	"encoding/xml"
++	"fmt"
++	"net/http"
++	"sync"
++	"time"
++
++	"github.com/0x524a/onvif-go/server/soap"
++)
++
++// Event service constants
++const (
++	// Default subscription termination time (60 seconds)
++	defaultTerminationTime = 60 * time.Second
++	// Maximum message limit per pull
++	maxMessageLimit = 100
++	// Default pull timeout
++	defaultPullTimeout = 30 * time.Second
++)
++
++// EventService handles ONVIF Event Service operations.
++type EventService struct {
++	server        *Server
++	subscriptions map[string]*PullPointSubscription
++	mutex         sync.RWMutex
++	eventQueue    map[string][]NotificationMessage
++}
++
++// PullPointSubscription represents an active PullPoint subscription.
++type PullPointSubscription struct {
++	SubscriptionID   string
++	ConsumerRef      string
++	Filter           string
++	InitialTermTime  time.Time
++	CurrentTermTime  time.Time
++	CreatedAt        time.Time
++	LastPullAt       time.Time
++	MessageCount     int
++}
++
++// NotificationMessage represents an event notification.
++type NotificationMessage struct {
++	Topic        string
++	ProducerRef  string
++	Message      EventMessage
++	UtcTime      time.Time
++	PropertyOp   string // "Initialized", "Changed", "Deleted"
++}
++
++// EventMessage contains event data.
++type EventMessage struct {
++	Source SimpleItem
++	Data   SimpleItem
++}
++
++// SimpleItem represents a simple name-value pair.
++type SimpleItem struct {
++	Name  string
++	Value string
++}
++
++// NewEventService creates a new Event Service.
++func NewEventService(server *Server) *EventService {
++	return &EventService{
++		server:        server,
++		subscriptions: make(map[string]*PullPointSubscription),
++		eventQueue:    make(map[string][]NotificationMessage),
++	}
++}
++
++// RegisterEventService registers the event service handlers.
++func (s *Server) registerEventService(mux *http.ServeMux) {
++	eventService := NewEventService(s)
++	handler := soap.NewHandler(s.config.Username, s.config.Password)
++
++	// Register event service handlers
++	handler.RegisterHandler("GetServiceCapabilities", eventService.HandleGetServiceCapabilities)
++	handler.RegisterHandler("CreatePullPointSubscription", eventService.HandleCreatePullPointSubscription)
++	handler.RegisterHandler("PullMessages", eventService.HandlePullMessages)
++	handler.RegisterHandler("Unsubscribe", eventService.HandleUnsubscribe)
++	handler.RegisterHandler("Renew", eventService.HandleRenew)
++	handler.RegisterHandler("GetEventProperties", eventService.HandleGetEventProperties)
++
++	mux.Handle(s.config.BasePath+"/event_service", handler)
++}
++
++// XML request/response structures for Event Service
++
++// GetServiceCapabilitiesResponse represents the response.
++type EventServiceCapabilitiesResponse struct {
++	XMLName      xml.Name                  `xml:"http://www.onvif.org/ver10/events/wsdl GetServiceCapabilitiesResponse"`
++	Capabilities EventServiceCapabilities  `xml:"Capabilities"`
++}
++
++// EventServiceCapabilities represents event service capabilities.
++type EventServiceCapabilities struct {
++	WSSubscriptionPolicySupport                   bool `xml:"WSSubscriptionPolicySupport,attr"`
++	WSPullPointSupport                            bool `xml:"WSPullPointSupport,attr"`
++	WSPausableSubscriptionManagerInterfaceSupport bool `xml:"WSPausableSubscriptionManagerInterfaceSupport,attr"`
++	MaxNotificationProducers                      int  `xml:"MaxNotificationProducers,attr"`
++	MaxPullPoints                                 int  `xml:"MaxPullPoints,attr"`
++	PersistentNotificationStorage                 bool `xml:"PersistentNotificationStorage,attr"`
++}
++
++// CreatePullPointSubscriptionRequest represents the request.
++type CreatePullPointSubscriptionRequest struct {
++	XMLName                 xml.Name `xml:"http://www.onvif.org/ver10/events/wsdl CreatePullPointSubscription"`
++	Filter                  string   `xml:"Filter,omitempty"`
++	InitialTerminationTime  string   `xml:"InitialTerminationTime,omitempty"`
++	SubscriptionPolicy      string   `xml:"SubscriptionPolicy,omitempty"`
++}
++
++// CreatePullPointSubscriptionResponse represents the response.
++type CreatePullPointSubscriptionResponse struct {
++	XMLName             xml.Name `xml:"http://www.onvif.org/ver10/events/wsdl CreatePullPointSubscriptionResponse"`
++	SubscriptionReference SubscriptionReference `xml:"SubscriptionReference"`
++	CurrentTime         string   `xml:"http://docs.oasis-open.org/wsn/b-2 CurrentTime"`
++	TerminationTime     string   `xml:"http://docs.oasis-open.org/wsn/b-2 TerminationTime"`
++}
++
++// SubscriptionReference contains the subscription endpoint.
++type SubscriptionReference struct {
++	Address string `xml:"http://www.w3.org/2005/08/addressing Address"`
++}
++
++// PullMessagesRequest represents the request.
++type PullMessagesRequest struct {
++	XMLName      xml.Name `xml:"http://www.onvif.org/ver10/events/wsdl PullMessages"`
++	Timeout      string   `xml:"Timeout"`
++	MessageLimit int      `xml:"MessageLimit"`
++}
++
++// PullMessagesResponse represents the response.
++type PullMessagesResponse struct {
++	XMLName             xml.Name              `xml:"http://www.onvif.org/ver10/events/wsdl PullMessagesResponse"`
++	CurrentTime         string                `xml:"CurrentTime"`
++	TerminationTime     string                `xml:"TerminationTime"`
++	NotificationMessage []NotificationMsgXML  `xml:"http://docs.oasis-open.org/wsn/b-2 NotificationMessage,omitempty"`
++}
++
++// NotificationMsgXML is the XML representation of a notification.
++type NotificationMsgXML struct {
++	Topic   TopicXML   `xml:"Topic"`
++	Message MessageXML `xml:"Message"`
++}
++
++// TopicXML represents the topic element.
++type TopicXML struct {
++	Dialect string `xml:"Dialect,attr"`
++	Topic   string `xml:",chardata"`
++}
++
++// MessageXML represents the message element.
++type MessageXML struct {
++	UtcTime    string `xml:"UtcTime,attr"`
++	PropertyOp string `xml:"PropertyOperation,attr,omitempty"`
++	Source     SourceXML `xml:"Source,omitempty"`
++	Data       DataXML   `xml:"Data,omitempty"`
++}
++
++// SourceXML represents the source element.
++type SourceXML struct {
++	SimpleItem []SimpleItemXML `xml:"SimpleItem,omitempty"`
++}
++
++// DataXML represents the data element.
++type DataXML struct {
++	SimpleItem []SimpleItemXML `xml:"SimpleItem,omitempty"`
++}
++
++// SimpleItemXML represents a simple item element.
++type SimpleItemXML struct {
++	Name  string `xml:"Name,attr"`
++	Value string `xml:"Value,attr"`
++}
++
++// UnsubscribeRequest represents the request.
++type UnsubscribeRequest struct {
++	XMLName xml.Name `xml:"http://docs.oasis-open.org/wsn/b-2 Unsubscribe"`
++}
++
++// UnsubscribeResponse represents the response.
++type UnsubscribeResponse struct {
++	XMLName xml.Name `xml:"http://docs.oasis-open.org/wsn/b-2 UnsubscribeResponse"`
++}
++
++// RenewRequest represents the request.
++type RenewRequest struct {
++	XMLName         xml.Name `xml:"http://docs.oasis-open.org/wsn/b-2 Renew"`
++	TerminationTime string   `xml:"TerminationTime"`
++}
++
++// RenewResponse represents the response.
++type RenewResponse struct {
++	XMLName         xml.Name `xml:"http://docs.oasis-open.org/wsn/b-2 RenewResponse"`
++	TerminationTime string   `xml:"TerminationTime"`
++	CurrentTime     string   `xml:"CurrentTime"`
++}
++
++// GetEventPropertiesRequest represents the request.
++type GetEventPropertiesRequest struct {
++	XMLName xml.Name `xml:"http://www.onvif.org/ver10/events/wsdl GetEventProperties"`
++}
++
++// GetEventPropertiesResponse represents the response.
++type GetEventPropertiesResponse struct {
++	XMLName                       xml.Name `xml:"http://www.onvif.org/ver10/events/wsdl GetEventPropertiesResponse"`
++	TopicNamespaceLocation        []string `xml:"TopicNamespaceLocation"`
++	FixedTopicSet                 bool     `xml:"http://docs.oasis-open.org/wsn/b-2 FixedTopicSet"`
++	TopicSet                      TopicSetXML `xml:"http://docs.oasis-open.org/wsn/t-1 TopicSet"`
++	TopicExpressionDialect        []string `xml:"http://docs.oasis-open.org/wsn/b-2 TopicExpressionDialect"`
++	MessageContentFilterDialect   []string `xml:"MessageContentFilterDialect"`
++	MessageContentSchemaLocation  []string `xml:"MessageContentSchemaLocation"`
++}
++
++// TopicSetXML represents the topic set.
++type TopicSetXML struct {
++	Device DeviceTopicXML `xml:"http://www.onvif.org/ver10/topics Device,omitempty"`
++}
++
++// DeviceTopicXML represents device topics.
++type DeviceTopicXML struct {
++	Trigger TriggerTopicXML `xml:"Trigger,omitempty"`
++}
++
++// TriggerTopicXML represents trigger topics.
++type TriggerTopicXML struct {
++	DigitalInput string `xml:"DigitalInput,omitempty"`
++}
++
++// Handler implementations
++
++// HandleGetServiceCapabilities handles GetServiceCapabilities request.
++func (e *EventService) HandleGetServiceCapabilities(body interface{}) (interface{}, error) {
++	return &EventServiceCapabilitiesResponse{
++		Capabilities: EventServiceCapabilities{
++			WSSubscriptionPolicySupport:                   false,
++			WSPullPointSupport:                            true,
++			WSPausableSubscriptionManagerInterfaceSupport: false,
++			MaxNotificationProducers:                      10,
++			MaxPullPoints:                                 10,
++			PersistentNotificationStorage:                 false,
++		},
++	}, nil
++}
++
++// HandleCreatePullPointSubscription handles CreatePullPointSubscription request.
++func (e *EventService) HandleCreatePullPointSubscription(body interface{}) (interface{}, error) {
++	e.mutex.Lock()
++	defer e.mutex.Unlock()
++
++	// Generate subscription ID
++	subscriptionID := generateSubscriptionID()
++
++	// Calculate termination time
++	termTime := time.Now().Add(defaultTerminationTime)
++
++	// Create subscription
++	subscription := &PullPointSubscription{
++		SubscriptionID:  subscriptionID,
++		InitialTermTime: termTime,
++		CurrentTermTime: termTime,
++		CreatedAt:       time.Now(),
++		LastPullAt:      time.Now(),
++	}
++
++	e.subscriptions[subscriptionID] = subscription
++	e.eventQueue[subscriptionID] = make([]NotificationMessage, 0)
++
++	// Build subscription reference URL
++	host := e.server.config.Host
++	if host == "0.0.0.0" || host == "" {
++		host = "localhost"
++	}
++	subRef := fmt.Sprintf("http://%s:%d%s/event_service?subscription=%s",
++		host, e.server.config.Port, e.server.config.BasePath, subscriptionID)
++
++	return &CreatePullPointSubscriptionResponse{
++		SubscriptionReference: SubscriptionReference{
++			Address: subRef,
++		},
++		CurrentTime:     time.Now().UTC().Format(time.RFC3339),
++		TerminationTime: termTime.UTC().Format(time.RFC3339),
++	}, nil
++}
++
++// HandlePullMessages handles PullMessages request.
++func (e *EventService) HandlePullMessages(body interface{}) (interface{}, error) {
++	e.mutex.Lock()
++	defer e.mutex.Unlock()
++
++	// For simplicity, return empty messages (no events)
++	// In a real implementation, this would return queued events
++	now := time.Now()
++	termTime := now.Add(defaultTerminationTime)
++
++	return &PullMessagesResponse{
++		CurrentTime:         now.UTC().Format(time.RFC3339),
++		TerminationTime:     termTime.UTC().Format(time.RFC3339),
++		NotificationMessage: []NotificationMsgXML{},
++	}, nil
++}
++
++// HandleUnsubscribe handles Unsubscribe request.
++func (e *EventService) HandleUnsubscribe(body interface{}) (interface{}, error) {
++	// In a full implementation, we would parse the subscription ID from the request
++	// For now, just return success
++	return &UnsubscribeResponse{}, nil
++}
++
++// HandleRenew handles Renew request.
++func (e *EventService) HandleRenew(body interface{}) (interface{}, error) {
++	now := time.Now()
++	termTime := now.Add(defaultTerminationTime)
++
++	return &RenewResponse{
++		CurrentTime:     now.UTC().Format(time.RFC3339),
++		TerminationTime: termTime.UTC().Format(time.RFC3339),
++	}, nil
++}
++
++// HandleGetEventProperties handles GetEventProperties request.
++func (e *EventService) HandleGetEventProperties(body interface{}) (interface{}, error) {
++	return &GetEventPropertiesResponse{
++		TopicNamespaceLocation: []string{
++			"http://www.onvif.org/onvif/ver10/topics/topicns.xml",
++		},
++		FixedTopicSet: true,
++		TopicSet: TopicSetXML{
++			Device: DeviceTopicXML{
++				Trigger: TriggerTopicXML{
++					DigitalInput: "tns1:Device/Trigger/DigitalInput",
++				},
++			},
++		},
++		TopicExpressionDialect: []string{
++			"http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet",
++			"http://docs.oasis-open.org/wsn/t-1/TopicExpression/Concrete",
++		},
++		MessageContentFilterDialect: []string{
++			"http://www.onvif.org/ver10/tev/messageContentFilter/ItemFilter",
++		},
++		MessageContentSchemaLocation: []string{
++			"http://www.onvif.org/onvif/ver10/schema/onvif.xsd",
++		},
++	}, nil
++}
++
++// PushEvent adds an event to all active subscriptions.
++func (e *EventService) PushEvent(topic string, source, data SimpleItem) {
++	e.mutex.Lock()
++	defer e.mutex.Unlock()
++
++	msg := NotificationMessage{
++		Topic:       topic,
++		ProducerRef: fmt.Sprintf("http://%s:%d", e.server.config.Host, e.server.config.Port),
++		Message: EventMessage{
++			Source: source,
++			Data:   data,
++		},
++		UtcTime:    time.Now().UTC(),
++		PropertyOp: "Changed",
++	}
++
++	// Add to all subscription queues
++	for subID := range e.subscriptions {
++		e.eventQueue[subID] = append(e.eventQueue[subID], msg)
++		// Limit queue size
++		if len(e.eventQueue[subID]) > maxMessageLimit {
++			e.eventQueue[subID] = e.eventQueue[subID][1:]
++		}
++	}
++}
++
++// CleanupExpiredSubscriptions removes expired subscriptions.
++func (e *EventService) CleanupExpiredSubscriptions() {
++	e.mutex.Lock()
++	defer e.mutex.Unlock()
++
++	now := time.Now()
++	for id, sub := range e.subscriptions {
++		if now.After(sub.CurrentTermTime) {
++			delete(e.subscriptions, id)
++			delete(e.eventQueue, id)
++		}
++	}
++}
++
++// generateSubscriptionID generates a unique subscription ID.
++func generateSubscriptionID() string {
++	return generateDeviceUUID()
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/server/media.go /tmp/rivision_owl_backup/onvif-go/server/media.go
+--- src/rivision_owl/onvif-go/server/media.go	2026-04-29 09:34:14.646677986 +0800
++++ /tmp/rivision_owl_backup/onvif-go/server/media.go	2026-04-12 13:10:07.000000000 +0800
+@@ -136,12 +136,14 @@
+ }
+ 
+ // GetStreamURIResponse represents GetStreamURI response.
++// Note: gowvp/onvif SDK expects elements WITHOUT namespace for proper parsing
+ type GetStreamURIResponse struct {
+-	XMLName  xml.Name `xml:"http://www.onvif.org/ver10/media/wsdl GetStreamURIResponse"`
++	XMLName  xml.Name `xml:"GetStreamUriResponse"`
+ 	MediaURI MediaURI `xml:"MediaUri"`
+ }
+ 
+ // MediaURI represents a media URI.
++// Note: gowvp/onvif SDK expects child elements WITHOUT namespace prefix
+ type MediaURI struct {
+ 	URI                 string `xml:"Uri"`
+ 	InvalidAfterConnect bool   `xml:"InvalidAfterConnect"`
+@@ -151,7 +153,7 @@
+ 
+ // GetSnapshotURIResponse represents GetSnapshotURI response.
+ type GetSnapshotURIResponse struct {
+-	XMLName  xml.Name `xml:"http://www.onvif.org/ver10/media/wsdl GetSnapshotURIResponse"`
++	XMLName  xml.Name `xml:"GetSnapshotUriResponse"`
+ 	MediaURI MediaURI `xml:"MediaUri"`
+ }
+ 
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/server/server.go /tmp/rivision_owl_backup/onvif-go/server/server.go
+--- src/rivision_owl/onvif-go/server/server.go	2026-04-29 09:34:14.646677986 +0800
++++ /tmp/rivision_owl_backup/onvif-go/server/server.go	2026-04-12 08:09:31.000000000 +0800
+@@ -6,6 +6,7 @@
+ 	"errors"
+ 	"fmt"
+ 	"net/http"
++	"strings"
+ 	"time"
+ 
+ 	"github.com/0x524a/onvif-go/server/soap"
+@@ -26,20 +27,58 @@
+ 	}
+ 
+ 	// Initialize streams for each profile
++	// Use StreamURI from config if provided, otherwise generate default
++	defaultStreamNames := []string{"car_v1", "road_v1", "shopping_v1", "persion_v1", "stream4"}
+ 	for i := range config.Profiles {
+ 		profile := &config.Profiles[i]
+-		streamPath := fmt.Sprintf("/stream%d", i)
+ 
+-		host := config.Host
+-		if host == "0.0.0.0" || host == "" {
+-			host = "localhost"
+-		}
++		var streamURI string
++		var rtspPath string
+ 
+-		streamURI := fmt.Sprintf("rtsp://%s:8554%s", host, streamPath)
++		if profile.StreamURI != "" {
++			// Convert file:// to rtsp:// via go2rtc
++			// file:///opt/rivision-owl/mp4path/car_v1.mp4 -> rtsp://127.0.0.1:8554/car_v1
++			if strings.HasPrefix(profile.StreamURI, "file://") {
++				// Extract filename without extension as stream name
++				filePath := strings.TrimPrefix(profile.StreamURI, "file://")
++				baseName := filePath
++				if lastSlash := strings.LastIndex(filePath, "/"); lastSlash != -1 {
++					baseName = filePath[lastSlash+1:]
++				}
++				// Remove extension (.mp4, .mkv, etc.)
++				if dotIdx := strings.LastIndex(baseName, "."); dotIdx != -1 {
++					baseName = baseName[:dotIdx]
++				}
++				streamURI = fmt.Sprintf("rtsp://127.0.0.1:8554/%s", baseName)
++				rtspPath = "/" + baseName
++			} else if strings.HasPrefix(profile.StreamURI, "rtsp://") {
++				// Use RTSP URI directly
++				streamURI = profile.StreamURI
++				if idx := strings.Index(streamURI, "://"); idx != -1 {
++					rest := streamURI[idx+3:]
++					if pathIdx := strings.Index(rest, "/"); pathIdx != -1 {
++						rtspPath = rest[pathIdx:]
++					}
++				}
++			} else {
++				// Treat as stream name, build RTSP URI
++				streamURI = fmt.Sprintf("rtsp://127.0.0.1:8554/%s", profile.StreamURI)
++				rtspPath = "/" + profile.StreamURI
++			}
++		} else {
++			// Generate default StreamURI
++			host := config.Host
++			if host == "0.0.0.0" || host == "" {
++				host = "localhost"
++			}
++			streamName := defaultStreamNames[i%len(defaultStreamNames)]
++			streamURI = fmt.Sprintf("rtsp://%s:8554/%s", host, streamName)
++			rtspPath = "/" + streamName
++		}
+ 
+ 		server.streams[profile.Token] = &StreamConfig{
+ 			ProfileToken: profile.Token,
+-			RTSPPath:     streamPath,
++			RTSPPath:     rtspPath,
+ 			StreamURI:    streamURI,
+ 		}
+ 
+@@ -115,6 +154,10 @@
+ 		s.registerImagingService(mux)
+ 	}
+ 
++	if s.config.SupportEvents {
++		s.registerEventService(mux)
++	}
++
+ 	// Add snapshot endpoint
+ 	mux.HandleFunc(s.config.BasePath+"/snapshot", s.handleSnapshot)
+ 
+@@ -139,6 +182,9 @@
+ 		if s.config.SupportImaging {
+ 			fmt.Printf("📷 Imaging Service: http://%s%s/imaging_service\n", addr, s.config.BasePath)
+ 		}
++		if s.config.SupportEvents {
++			fmt.Printf("📨 Event Service: http://%s%s/event_service\n", addr, s.config.BasePath)
++		}
+ 		fmt.Printf("\n🌐 Virtual Camera Profiles:\n")
+ 		//nolint:gocritic // Range value copy is acceptable for small structs
+ 		for i, profile := range s.config.Profiles {
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/server/soap/handler.go /tmp/rivision_owl_backup/onvif-go/server/soap/handler.go
+--- src/rivision_owl/onvif-go/server/soap/handler.go	2026-04-29 09:34:14.646677986 +0800
++++ /tmp/rivision_owl_backup/onvif-go/server/soap/handler.go	2026-04-12 11:52:46.000000000 +0800
+@@ -35,8 +35,9 @@
+ }
+ 
+ // RegisterHandler registers a handler for a specific action/message type.
++// Actions are stored in lowercase for case-insensitive matching.
+ func (h *Handler) RegisterHandler(action string, handler MessageHandler) {
+-	h.handlers[action] = handler
++	h.handlers[strings.ToLower(action)] = handler
+ }
+ 
+ // ServeHTTP implements http.Handler interface.
+@@ -73,8 +74,8 @@
+ 		return
+ 	}
+ 
+-	// Authenticate if credentials are configured
+-	if h.username != "" && h.password != "" {
++	// Authenticate if credentials are configured (skip for public methods per ONVIF spec)
++	if h.username != "" && h.password != "" && !isPublicMethod(action) {
+ 		if !h.authenticate(&envelope) {
+ 			h.sendFault(w, "Sender", "Authentication failed", "Invalid username or password")
+ 
+@@ -82,16 +83,16 @@
+ 		}
+ 	}
+ 
+-	// Find and execute handler
+-	handler, ok := h.handlers[action]
++	// Find and execute handler (case-insensitive)
++	handler, ok := h.handlers[strings.ToLower(action)]
+ 	if !ok {
+ 		h.sendFault(w, "Receiver", "Action not supported", fmt.Sprintf("No handler for action: %s", action))
+ 
+ 		return
+ 	}
+ 
+-	// Execute handler
+-	response, err := handler(envelope.Body.Content)
++	// Execute handler with raw XML body content
++	response, err := handler(envelope.Body.RawXML)
+ 	if err != nil {
+ 		h.sendFault(w, "Receiver", "Handler error", err.Error())
+ 
+@@ -102,7 +103,36 @@
+ 	h.sendResponse(w, response)
+ }
+ 
++// isPublicMethod checks if the action is a public method that doesn't require authentication.
++// Per ONVIF spec, GetCapabilities, GetServices, GetServiceCapabilities are public.
++func isPublicMethod(action string) bool {
++	publicMethods := []string{
++		"GetCapabilities",
++		"GetServices",
++		"GetServiceCapabilities",
++		"GetWsdlUrl",
++		"GetSystemDateAndTime",
++		"GetEndpointReference",
++	}
++	for _, m := range publicMethods {
++		if strings.Contains(action, m) {
++			return true
++		}
++	}
++	return false
++}
++
++// WS-Security Password Type URIs (OASIS WSS UsernameToken Profile 1.0)
++const (
++	// PasswordDigestURI is the URI for digest password type.
++	PasswordDigestURI = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest"
++	// PasswordTextURI is the URI for plaintext password type.
++	PasswordTextURI = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
++)
++
+ // authenticate verifies the WS-Security credentials.
++// Supports both PasswordDigest (default) and PasswordText authentication per OASIS WSS spec.
++// Also compatible with gowvp/onvif SDK which sends non-base64 encoded nonce.
+ func (h *Handler) authenticate(envelope *originsoap.Envelope) bool {
+ 	if envelope.Header == nil || envelope.Header.Security == nil || envelope.Header.Security.UsernameToken == nil {
+ 		return false
+@@ -115,21 +145,77 @@
+ 		return false
+ 	}
+ 
+-	// Decode nonce
++	// Determine password type and authenticate accordingly
++	// Per OASIS WSS UsernameToken Profile 1.0:
++	// - PasswordText: password is sent as plaintext
++	// - PasswordDigest: password is Base64(SHA1(Nonce + Created + Password))
++	// - If Type is empty, default to PasswordDigest for security
++	passwordType := token.Password.Type
++
++	// PasswordText authentication
++	if passwordType == PasswordTextURI {
++		return token.Password.Password == h.password
++	}
++
++	// PasswordDigest authentication (default)
++	// Requires Nonce and Created timestamp
++	if token.Nonce.Nonce == "" || token.Created == "" {
++		// If no Nonce/Created but also no Type specified, allow plaintext as fallback
++		// This enables simple testing while maintaining security for typed requests
++		if passwordType == "" && token.Password.Password == h.password {
++			return true
++		}
++		return false
++	}
++
++	// Try to decode nonce as Base64 (standard ONVIF)
++	// If decoding fails, the nonce might be sent as raw string (gowvp/onvif SDK compatibility)
+ 	nonce, err := base64.StdEncoding.DecodeString(token.Nonce.Nonce)
+ 	if err != nil {
+-		return false
++		// gowvp/onvif SDK sends nonce as raw string but decodes it before hashing
++		// So we need to try: Base64Decode(rawNonce) for the hash calculation
++		nonce, _ = base64.StdEncoding.DecodeString(token.Nonce.Nonce)
++		// If still fails, use raw nonce bytes
++		if len(nonce) == 0 {
++			nonce = []byte(token.Nonce.Nonce)
++		}
+ 	}
+ 
+-	// Calculate expected digest
++	// Calculate expected digest: Base64(SHA1(Nonce + Created + Password))
+ 	hash := sha1.New() //nolint:gosec // SHA1 required for ONVIF digest auth
+ 	hash.Write(nonce)
+ 	hash.Write([]byte(token.Created))
+ 	hash.Write([]byte(h.password))
+ 	expectedDigest := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+ 
+-	// Compare digests
+-	return token.Password.Password == expectedDigest
++	// Compare digests - try standard method first
++	if token.Password.Password == expectedDigest {
++		return true
++	}
++
++	// Fallback 1: gowvp/onvif SDK uses raw nonce string for Base64 decode in digest calculation
++	// even though the nonce itself may not be valid Base64
++	// Try with raw nonce bytes directly
++	hash2 := sha1.New() //nolint:gosec // SHA1 required for ONVIF digest auth
++	hash2.Write([]byte(token.Nonce.Nonce))
++	hash2.Write([]byte(token.Created))
++	hash2.Write([]byte(h.password))
++	expectedDigest2 := base64.StdEncoding.EncodeToString(hash2.Sum(nil))
++
++	if token.Password.Password == expectedDigest2 {
++		return true
++	}
++
++	// Fallback 2: gowvp/onvif SDK behavior - when Base64 decode fails, it uses EMPTY bytes
++	// sDec, _ := base64.StdEncoding.DecodeString(Nonce) -> returns empty on invalid Base64
++	// Then uses empty bytes for hash calculation
++	hash3 := sha1.New() //nolint:gosec // SHA1 required for ONVIF digest auth
++	// Write nothing for nonce (empty bytes)
++	hash3.Write([]byte(token.Created))
++	hash3.Write([]byte(h.password))
++	expectedDigest3 := base64.StdEncoding.EncodeToString(hash3.Sum(nil))
++
++	return token.Password.Password == expectedDigest3
+ }
+ 
+ // extractAction extracts the action/message type from the SOAP body.
+diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/server/types.go /tmp/rivision_owl_backup/onvif-go/server/types.go
+--- src/rivision_owl/onvif-go/server/types.go	2026-04-29 09:34:14.647475218 +0800
++++ /tmp/rivision_owl_backup/onvif-go/server/types.go	2026-04-12 07:59:05.000000000 +0800
+@@ -67,6 +67,7 @@
+ type ProfileConfig struct {
+ 	Token        string              // Profile token (unique identifier)
+ 	Name         string              // Profile name
++	StreamURI    string              // RTSP stream URI (e.g., rtsp://host:port/path)
+ 	VideoSource  VideoSourceConfig   // Video source configuration
+ 	AudioSource  *AudioSourceConfig  // Audio source configuration (optional)
+ 	VideoEncoder VideoEncoderConfig  // Video encoder configuration

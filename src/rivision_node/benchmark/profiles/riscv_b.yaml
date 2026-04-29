@@ -1,0 +1,98 @@
+# Profile: riscv_b
+# K3 RISC-V + SpacemiT NPU 平台配置
+
+name: riscv_b
+platform: riscv64
+description: "K3 RISC-V with SpacemiT NPU (4 TOPS)"
+
+# ================================================
+# 编译配置
+# ================================================
+build:
+  toolchain: cmake/toolchain-riscv64.cmake
+  cross_compile: true
+  sysroot: ${PROJECT_ROOT}/tools/spacemit-toolchain-linux-glibc-x86_64-v1.2.2/sysroot
+  c_flags: "-march=rv64gcv -O3 -ffast-math"
+  cxx_flags: "-march=rv64gcv -O3 -ffast-math"
+
+# ================================================
+# YOLO 配置
+# ================================================
+yolo:
+  backend: ort_npu
+  execution_provider: SpacemiTNPUExecutionProvider
+  workers: 2
+  threads_per_worker: 2
+  
+  # ONNX Runtime 库路径
+  ort_lib: ${PROJECT_ROOT}/yolo-server/third_party/spacemit-ort-current/lib
+  ort_include: ${PROJECT_ROOT}/yolo-server/third_party/spacemit-ort-current/include
+  
+  # 模型文件
+  model_dir: ${PROJECT_ROOT}/models/shared
+  default_model: yolov8n.onnx
+  
+  # 推理参数
+  conf_threshold: 0.25
+  nms_threshold: 0.45
+
+# ================================================
+# VLM 配置
+# ================================================
+vlm:
+  backend: llama_npu
+  cli: llama-mtmd-cli
+  cli_path: ${PROJECT_ROOT}/third_party/llama.cpp/riscv64-current/bin/llama-mtmd-cli
+  
+  # NPU 配置
+  media_backend: smt
+  threads: 6
+  
+  # 推理参数
+  context_length: 4096
+  max_tokens: 512
+  temperature: 0.3
+  extra_args: "--no-warmup --cache-type-k q8_0 --cache-type-v q8_0"
+  
+  # 模型文件
+  model_dir: ${PROJECT_ROOT}/models/shared
+  default_model: Qwen3VL
+
+# ================================================
+# Benchmark 参数
+# ================================================
+benchmark:
+  warmup_runs: 5
+  main_runs: 100
+  cooldown_sec: 2
+  
+  # 并发测试级别
+  concurrency_levels: [1, 2, 4]
+  
+  # 压力测试时长 (秒)
+  stress_duration_sec: 300
+  
+  # 资源监控
+  monitor_cpu: true
+  monitor_memory: true
+  monitor_interval_ms: 100
+
+# ================================================
+# 预期性能 (参考值)
+# ================================================
+expected_performance:
+  yolo:
+    yolov8n:
+      fps_min: 60
+      fps_max: 100
+      latency_ms_max: 20
+    yolov8s:
+      fps_min: 30
+      fps_max: 50
+      latency_ms_max: 40
+  vlm:
+    qwen3vl-4b:
+      tokens_per_sec_min: 4
+      tokens_per_sec_max: 6
+      vision_encode_ms_max: 500
+      ttft_ms_max: 600

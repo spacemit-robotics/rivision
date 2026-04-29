@@ -1,0 +1,27 @@
+# Profile: x86
+# x86_64 平台部署配置
+#
+# 新增 profile: 复制此文件，修改路径即可，package_profile.sh 自动读取
+# 所有路径相对于 src/rivision_node/
+
+name: x86
+platform: amd64
+goarch: amd64
+
+# yolo-server 预编译二进制
+yolo_bin: yolo-server/bin/yolo-server.x86_64
+yolo_bin_fallback: yolo-server/build/yolo-server
+
+# onnxruntime 运行时库目录（仅复制 .so）
+ort_lib_dir: yolo-server/third_party/onnxruntime_x86/lib
+ort_lib_glob: "libonnxruntime.so*"
+
+# llama.cpp 类型: prebuilt（预编译 bin/lib 结构）| source_repo（完整源码仓库，提取 build 产物）
+llama_type: source_repo
+llama_source: third_party/llama.cpp/x86_64
+llama_build_dir: build_x86
+
+# 模型 (Qwen3VL 为默认)
+model_default: models/shared/Qwen3VL
+model_optional: models/shared/miniCPM_v4.5 models/shared/fastvlm-0.5b-q8
+model_yolo: models/shared/yolov8n.onnx

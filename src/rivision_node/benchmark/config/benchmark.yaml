@@ -1,0 +1,176 @@
+# ============================================================
+# RiVision Benchmark 配置文件
+# ============================================================
+
+benchmark:
+  name: "RiVision YOLO/VLM Benchmark"
+  version: "1.0.0"
+  
+  # 测试参数
+  warmup_runs: 5
+  main_runs: 100
+  cooldown_sec: 2
+
+# ============================================================
+# 计算资源配置 (CPU + NPU)
+# ============================================================
+# 配置优先级: 环境变量 > 此配置文件 > 默认值
+# 例如: YOLO_THREADS=8 ./benchmark 会覆盖此处的配置
+
+# CPU 配置
+cpu:
+  # CPU 线程数 (用于图像预处理、后处理、NMS等)
+  # K3 有 8 个 RISC-V 核心 (CPU 0-7)
+  # 
+  # ★ 推荐值:
+  #   - 8: 最大化预处理并行 (满足 T_pre < T_npu 条件)
+  #   - 6: 保守配置 (留 2 核给系统)
+  threads: 8            # ★ 最低延时场景推荐 8
+
+# NPU 配置 (K3 A100)
+# K3 有 8 个 A100 智算核 (CPU 8-15)
+# SpacemiT EP / llama.cpp 会自动将推理任务调度到 A100 核心
+npu:
+  # YOLO (ORT SpacemiT EP) 使用的 A100 核心数
+  # 当前硬件: 4 核可用
+  # 
+  # ★★★ 4 核最优配置 (实测验证) ★★★
+  # ┌─────────────────────────────────────────────────────────────────┐
+  # │ 配置                │ FPS       │ NPU利用率│ 说明               │
+  # │─────────────────────┼───────────┼──────────┼────────────────────│
+  # │ 4核 + 单Session     │ 41.5      │ ~65%     │ 基准               │
+  # │ 4核 + 双Session     │ 47.8      │ ~95%     │ ★最优 (+15%)       │
+  # └─────────────────────────────────────────────────────────────────┘
+  yolo_threads: 4           # ★ NPU 核心数 (A100 当前可用 4 核)
+  
+  # ★ 双 Session 模式 (2+2 配置)
+  # 实测: dual_session=true → FPS 从 41.5 提升到 47.8 (+15%)
+  dual_session: true        # ★ 启用双 Session (最优配置)
+  
+  # VLM (llama.cpp) 使用的 A100 核心数
+  vlm_threads: 8
+
+# 数据源配置
+data_source:
+  # 类型: video_file / video_stream / image_folder / single_image
+  type: single_image
+  
+  # 路径
+  path: "../test.jpg"
+  
+  # 视频参数
+  fps_limit: 0              # 0 = 无限制
+  loop: true
+
+# YOLO 配置
+yolo:
+  # 本地推理 (情况1)
+  local:
+    enabled: true
+    model: "../models/yolov8n.onnx"
+    threads: 4
+    batch_size: 1
+    conf_threshold: 0.25
+    nms_threshold: 0.45
+  
+  # HTTP 服务 (情况2)
+  http:
+    enabled: true
+    url: "http://127.0.0.1:9081"
+    timeout_ms: 30000
+    pool_size: 8
+    
+    # 并发测试级别
+    concurrency_levels: [1, 2, 4, 8]
+
+# VLM 配置
+vlm:
+  # 本地推理 (情况1)
+  local:
+    enabled: true
+    model: "../models/minicpm-v.gguf"
+    mmproj: "smt"           # "smt" = NPU 加速, 或 mmproj 文件路径
+    threads: 6
+    max_tokens: 512
+    temperature: 0.3
+    prompt: "Describe this image in detail."
+  
+  # HTTP 服务 (情况2)
+  http:
+    enabled: true
+    url: "http://127.0.0.1:8080"
+    timeout_ms: 60000
+    concurrency_levels: [1, 2]
+
+# 指标配置
+metrics:
+  # 输出格式
+  output_format: ["json", "csv", "markdown"]
+  output_dir: "./results"
+  
+  # 实时显示
+  realtime_display: true
+  display_interval_sec: 1
+  
+  # 延迟直方图桶 (ms)
+  histogram_buckets: [10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
+  
+  # 资源监控
+  resource_monitoring:
+    enabled: true
+    sample_interval_ms: 500
+
+# 测试场景
+scenarios:
+  # 单帧延迟测试
+  single_frame_latency:
+    enabled: true
+    runs: 100
+    concurrency: 1
+  
+  # 最大吞吐测试
+  max_throughput:
+    enabled: true
+    runs: 500
+    concurrency: auto      # auto = 根据 backend workers 自动选择
+  
+  # 并发扫描
+  concurrency_sweep:
+    enabled: true
+    runs_per_level: 100
+    levels: [1, 2, 4, 8]
+  
+  # 压力测试
+  stress_test:
+    enabled: false
+    duration_sec: 3600     # 1 小时
+    concurrency: 4
+  
+  # 多路视频仿真
+  multi_stream:
+    enabled: false
+    streams: 4
+    fps_per_stream: 15
+    duration_sec: 300      # 5 分钟
+
+# 平台特定配置
+platform:
+  # K3 (RISC-V SpacemiT)
+  # ★ 4 核模式最优配置 (最低延时 + 最高 NPU 利用率)
+  riscv64:
+    cpu_threads: 8      # 最大化预处理并行 (满足 T_pre < T_npu)
+    yolo_threads: 4     # 当前可用 4 核
+    dual_session: false # 单 Session (4核必须禁用)
+    vlm_threads: 8
+    use_npu: true
+  
+  # x86_64
+  x86_64:
+    yolo_threads: 8
+    vlm_threads: 8
+    use_cuda: auto
+  
+  # ARM64
+  aarch64:
+    yolo_threads: 4
+    vlm_threads: 6

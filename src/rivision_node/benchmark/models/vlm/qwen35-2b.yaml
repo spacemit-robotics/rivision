@@ -1,0 +1,43 @@
+# Qwen3.5-2B 模型配置 (K3 SMT/NPU 模式)
+
+name: qwen35-2b
+family: qwen3_5
+size: "2B"
+quantization: Q4_1
+description: "Qwen3.5 VL 2B - 中等规模视觉语言模型"
+
+# K3 实际模型目录: models/vlm/Qwen3.5-2B/
+files:
+  directory: Qwen3.5-2B
+  text_model: qwen3_5_2b-text-q41.gguf
+  vision_model: qwen3_5_2b-vision-224-op23.f16.onnx
+  vision_model_alt:
+    - qwen3_5_2b-vision-384-op23.f16.onnx  # 384x384
+    - qwen3_5_2b-vision-768-op23.f16.onnx  # 768x768
+  config: config.json
+  input_size: 384  # config.json 中指定
+
+inference:
+  context_length: 4096
+  max_tokens: 512
+  temperature: 0.3
+  default_prompt: "描述图片内容"
+
+platform_config:
+  riscv_b:
+    threads: 6
+    media_backend: smt
+    cache_type_k: q8_0
+    cache_type_v: q8_0
+    extra_args: "--no-warmup"
+
+compatibility:
+  supported_platforms: [riscv_b, x86]
+  min_memory_gb: 4
+
+expected_performance:
+  riscv_b:
+    tokens_per_sec_min: 8
+    tokens_per_sec_max: 12
+    vision_encode_ms: 150
+    ttft_ms: 200

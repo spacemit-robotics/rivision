@@ -1,0 +1,25 @@
+# 推理节点配置
+nodes:
+  - id: k3-node-1
+    name: "K3 推理节点 1"
+    url: http://192.168.1.100:8080
+    model: fastvlm-0.5b
+    weight: 1
+    max_parallel: 1
+    tags:
+      - k3
+      - fastvlm
+    metadata:
+      location: local
+      
+  - id: k3-node-2
+    name: "K3 推理节点 2"
+    url: http://192.168.1.101:8080
+    model: fastvlm-0.5b
+    weight: 1
+    max_parallel: 1
+    tags:
+      - k3
+      - fastvlm
+    metadata:
+      location: local

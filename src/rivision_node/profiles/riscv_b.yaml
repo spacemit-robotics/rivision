@@ -1,0 +1,25 @@
+# Profile: riscv_b
+# RISC-V K3 NPU 模式部署配置
+# 使用 onnxruntime rc3 + llama.cpp 0.0.7+a4（预编译，不支持源码编译）
+
+name: riscv_b
+platform: riscv64
+goarch: riscv64
+
+# yolo-server 预编译二进制
+yolo_bin: yolo-server/bin/yolo-server.riscv64
+
+# onnxruntime 运行时库目录（仅复制 .so）
+ort_lib_dir: yolo-server/third_party/spacemit-ort-current/lib
+ort_lib_glob: "*.so*"
+# 额外运行时库 (rc3版本已集成，无需额外目录)
+# ort_extra_lib: yolo-server/third_party/spacemit-ort.riscv64.2.0.2+rc3/spine-tcm-0.0.1/lib
+
+# llama.cpp 类型: prebuilt（预编译 bin/ + lib/ 结构）
+llama_type: prebuilt
+llama_source: third_party/llama.cpp/riscv64-current
+
+# 模型 (Qwen3VL 为默认，NPU模式下可选 fastvlm-mm)
+model_default: models/shared/Qwen3VL
+model_optional: models/shared/miniCPM_v4.5 models/riscv_b/fastvlm-mm-0.5b-q4_1
+model_yolo: models/shared/910byolo11n_b2.q.onnx models/shared/yolov8n.onnx

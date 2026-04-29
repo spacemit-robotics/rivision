@@ -1,0 +1,23 @@
+# RiVision OWL - x86_64 平台配置
+platform: x86_64
+goarch: amd64
+
+owl:
+  binary: owl
+  build_cmd: "GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o build/owl-amd64 ."
+  output: build/owl-amd64
+
+zlmediakit:
+  type: prebuilt
+  path: ZLMediaKit/release/linux/Release/MediaServer
+
+gb28181_sim:
+  binary: gb28181-sim
+  build_cmd: "GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o build/gb28181-sim-amd64 ."
+  output: build/gb28181-sim-amd64
+
+install:
+  base_dir: /opt/rivision-owl
+  services:
+    - rivision-owl.service
+    - rivision-zlm.service

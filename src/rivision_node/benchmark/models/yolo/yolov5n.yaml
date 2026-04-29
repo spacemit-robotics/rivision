@@ -1,0 +1,72 @@
+# YOLOv5n 模型配置
+
+name: yolov5n
+family: yolov5
+size: n
+description: "YOLOv5 Nano - 最轻量级的 YOLOv5 模型"
+
+input:
+  width: 640
+  height: 640
+  channels: 3
+  format: NCHW
+  normalize: true
+
+inference:
+  conf_threshold: 0.25
+  nms_threshold: 0.45
+  max_detections: 100
+  num_classes: 80
+
+# 平台模型文件 - 不同平台使用不同优化版本
+platform_models:
+  x86:
+    file: yolov5n.onnx
+    provider: CPUExecutionProvider
+    precision: fp32
+    opset: 11
+  
+  riscv_b:
+    # SpacemiT NPU 优化版本
+    file: yolov5n_spacemit.onnx
+    provider: SpacemiTNPUExecutionProvider
+    precision: fp32
+    optimized: true
+    fallback: yolov5n.onnx
+  
+  arm_gpu:
+    file: yolov5n.engine
+    provider: TensorRTExecutionProvider
+    precision: fp16
+    cuda_arch: sm_87
+    fallback: yolov5n.onnx
+
+# 模型文件变体 (不同量化/优化版本)
+variants:
+  default:
+    file: yolov5n.onnx
+    description: "标准 ONNX 模型"
+  
+  spacemit_npu:
+    file: yolov5n_spacemit.onnx
+    description: "SpacemiT NPU 优化版本"
+    platforms: [riscv_b]
+  
+  tensorrt_fp16:
+    file: yolov5n_fp16.engine
+    description: "TensorRT FP16 引擎"
+    platforms: [arm_gpu]
+
+expected_performance:
+  x86:
+    fps_min: 120
+    fps_max: 180
+    latency_avg_ms: 7
+  riscv_b:
+    fps_min: 80
+    fps_max: 120
+    latency_avg_ms: 10
+  arm_gpu:
+    fps_min: 350
+    fps_max: 500
+    latency_avg_ms: 2.5

@@ -1,0 +1,46 @@
+# ============================================================
+# ZLMediaKit systemd 服务单元（外部 ZLM 模式）
+#
+# 【用途】仅在 OWL 使用外部 ZLM 模式（owl -no-zlm）时使用。
+#         OWL 默认使用嵌入式 ZLM，无需此服务。
+#
+# 【部署步骤】
+#   1. 将此文件复制到 /etc/systemd/system/rivision-zlm.service
+#   2. 修改 /opt/rivision-owl/config/.env 中的 ZLM_* 变量
+#   3. 运行: sudo systemctl daemon-reload
+#   4. 运行: sudo systemctl enable rivision-zlm
+#   5. 运行: sudo systemctl start rivision-zlm
+#
+# 【配置说明】
+#   - 所有 ZLM 端口和密钥由 /opt/rivision-owl/config/.env 统一管理
+#   - 日志通过 journalctl 查看: sudo journalctl -u rivision-zlm -f
+#   - 使用非 root 用户运行（安全最佳实践）
+# ============================================================
+
+[Unit]
+Description=ZLMediaKit Media Server (External Mode - Rivision OWL)
+Documentation=https://github.com/ZLMediaKit/ZLMediaKit
+After=network.target
+
+[Service]
+Type=simple
+# 使用非 root 用户运行（默认创建 owl 用户，如不存在请先创建）
+User=owl
+Group=owl
+WorkingDirectory=/opt/rivision-owl
+# 读取 .env 中的 ZLM_* 环境变量
+EnvironmentFile=/opt/rivision-owl/config/.env
+# 启动 ZLM 二进制，读取运行时生成的 config.ini
+ExecStart=/opt/rivision-owl/bin/MediaServer -c /opt/rivision-owl/config/config.ini
+Restart=always
+RestartSec=5
+# 日志输出到 journald（通过 journalctl 查看）
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-zlm
+# 资源限制（合理值，防止恶意消耗）
+LimitNOFILE=65535
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

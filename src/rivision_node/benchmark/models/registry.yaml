@@ -1,0 +1,175 @@
+# RiVision Benchmark 模型注册表 v2.0
+# 定义支持的 YOLO 和 VLM 模型
+
+version: "2.0"
+
+# ================================================
+# YOLO 模型列表
+# ================================================
+yolo:
+  default: yolov8n
+  
+  models:
+    # YOLOv5 系列
+    - name: yolov5n
+      config: yolo/yolov5n.yaml
+      description: "YOLOv5 Nano - 最轻量级"
+    - name: yolov5s
+      config: yolo/yolov5s.yaml
+      description: "YOLOv5 Small - 平衡版"
+    - name: yolov5m
+      config: yolo/yolov5m.yaml
+      description: "YOLOv5 Medium - 高精度"
+    
+    # YOLOv8 系列
+    - name: yolov8n
+      config: yolo/yolov8n.yaml
+      description: "YOLOv8 Nano - 推荐默认"
+    - name: yolov8s
+      config: yolo/yolov8s.yaml
+      description: "YOLOv8 Small"
+    - name: yolov8m
+      config: yolo/yolov8m.yaml
+      description: "YOLOv8 Medium"
+    
+    # YOLOv11 系列 (最新)
+    - name: yolov11n
+      config: yolo/yolov11n.yaml
+      description: "YOLOv11 Nano - K3 NPU 量化优化"
+    - name: yolov11s
+      config: yolo/yolov11s.yaml
+      description: "YOLOv11 Small"
+    - name: yolov11m
+      config: yolo/yolov11m.yaml
+      description: "YOLOv11 Medium"
+  
+  # K3 RISC-V 推荐模型
+  k3_recommended:
+    - yolov11n   # 有专门的 INT8 量化版本
+    - yolov8n
+    - yolov5n
+  
+  # 平台特定模型文件映射
+  platform_model_files:
+    riscv_b:
+      yolov11n: 910byolo11n_b2.q.onnx  # 已有的量化模型
+      yolov8n: yolov8n.onnx
+    x86:
+      default_suffix: .onnx
+    arm_gpu:
+      default_suffix: .engine
+      fallback_suffix: .onnx
+
+# ================================================
+# VLM 模型列表
+# ================================================
+vlm:
+  default: qwen3vl-4b
+  
+  models:
+    # Qwen3VL 系列
+    - name: qwen3vl-4b
+      config: vlm/qwen3vl-4b.yaml
+      description: "Qwen3VL 4B - K3 推荐"
+    - name: qwen3vl-30b
+      config: vlm/qwen3vl-30b.yaml
+      description: "Qwen3VL 30B - 高精度 (需 24GB+)"
+    
+    # FastVLM 系列 (K3 NPU 优化)
+    - name: fastvlm-0.5b
+      config: vlm/fastvlm-0.5b.yaml
+      description: "FastVLM 0.5B - K3 NPU 优化"
+    
+    # MiniCPM 系列
+    - name: minicpm-v4.5
+      config: vlm/minicpm-v4.5.yaml
+      description: "MiniCPM-V 4.5 - 多图理解"
+  
+  # K3 RISC-V 推荐模型
+  k3_recommended:
+    - fastvlm-0.5b   # NPU 优化，速度最快
+    - qwen3vl-4b     # 质量与速度平衡
+    - minicpm-v4.5   # 多模态理解
+  
+  # llama.cpp 后端配置
+  llama_backends:
+    riscv_b:
+      type: smt           # SpacemiT media backend
+      binary: llama-mtmd-cli
+      extra_args: ["--no-warmup"]
+    x86:
+      type: cpu
+      binary: llama-mtmd-cli
+      extra_args: []
+    arm_gpu:
+      type: cuda
+      binary: llama-mtmd-cli
+      extra_args: ["--flash-attn", "-ngl", "-1"]
+
+# ================================================
+# 平台兼容性
+# ================================================
+compatibility:
+  # 30B 模型内存需求大, K3 不支持
+  qwen3vl-30b:
+    exclude_platforms: [riscv_b]
+    min_memory_gb: 24
+  
+  # FastVLM 针对 NPU 优化
+  fastvlm-0.5b:
+    preferred_platforms: [riscv_b]
+    note: "Optimized for SpacemiT NPU"
+  
+  # MiniCPM 全平台支持
+  minicpm-v4.5:
+    supported_platforms: [x86, riscv_b, arm_gpu]
+    min_memory_gb: 8
+
+# ================================================
+# K3 RISC-V 专项配置
+# ================================================
+k3_specific:
+  # SpacemiT NPU 优化设置
+  npu:
+    enabled: true
+    ort_provider: SpacemiTNPUExecutionProvider
+    quantization_support: [int8, fp32]
+  
+  # llama.cpp smt 后端
+  llama_smt:
+    enabled: true
+    config_dir_env: LLAMA_SMT_CONFIG_DIR
+    supported_models:
+      - Qwen3VL
+      - FastVLM
+      - MiniCPM
+  
+  # 推荐测试组合
+  benchmark_presets:
+    quick:
+      yolo: yolov8n
+      vlm: fastvlm-0.5b
+      runs: 50
+    standard:
+      yolo: yolov11n
+      vlm: qwen3vl-4b
+      runs: 100
+    comprehensive:
+      yolo: [yolov5n, yolov8n, yolov11n]
+      vlm: [fastvlm-0.5b, qwen3vl-4b, minicpm-v4.5]
+      runs: 200
+
+# ================================================
+# 模型目录
+# ================================================
+directories:
+  shared: ${PROJECT_ROOT}/models/shared
+  x86: ${PROJECT_ROOT}/models/x86
+  riscv_b: ${PROJECT_ROOT}/models/riscv_b
+  arm_gpu: ${PROJECT_ROOT}/models/arm_gpu
+  
+  # 实际模型文件位置 (基于项目结构)
+  actual_paths:
+    shared_yolo: ${PROJECT_ROOT}/src/rivision_node/models/shared
+    shared_vlm: ${PROJECT_ROOT}/src/rivision_node/models/shared
+    k3_vlm: ${PROJECT_ROOT}/src/rivision_node/models/riscv_b

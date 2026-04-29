@@ -1,0 +1,13 @@
+# Third-party dependency versions for rivision_node
+# 更新方法: 
+#   1. 修改此文件中的版本号
+#   2. 运行: make update-third-party
+
+# SpaceMIT ONNX Runtime (RISC-V K3)
+SPACEMIT_ORT_VERSION=2.0.2+rc3
+SPACEMIT_ORT_ARCHIVE=spacemit-ort.riscv64.${SPACEMIT_ORT_VERSION}.tar.gz
+
+# llama.cpp (RISC-V)
+LLAMA_CPP_VERSION=0.0.7+a4
+LLAMA_CPP_ARCHIVE=llama.cpp.${LLAMA_CPP_VERSION}.tar.gz
+LLAMA_CPP_DIR=riscv64-${LLAMA_CPP_VERSION}
