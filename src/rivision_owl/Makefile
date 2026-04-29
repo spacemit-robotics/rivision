@@ -3,9 +3,8 @@
 # ZLMediaKit 嵌入式编译说明:
 #   - go:embed 要求二进制在 owl/internal/embed/binaries/ 中存在
 #   - 因此 build 前必须先 build-zlm
-#   - x86_64: 使用 ZLMediaKit/release/linux/Release/MediaServer
-#   - RISC-V: 使用 ZLMediaKit/build-riscv64/release/linux/Release/MediaServer
-#             如需重新编译: make zlm-x86 或 make zlm-riscv64
+#   - 编译产物: ZLMediaKit/release/linux/Release/MediaServer
+#   - 如需重新编译: make zlm-x86 或 make zlm-riscv64
 
 VERSION  ?= 1.0.0
 PROFILE  ?= x86
@@ -18,9 +17,11 @@ EMBED_DIR := owl/internal/embed/binaries
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # 内部变量（不要在命令行覆盖）
-# 直接使用 ZLMediaKit 源码编译产物
-_src_zlm_x86   := ZLMediaKit/build-x86_64/release/linux/Release/MediaServer
-_src_zlm_riscv := ZLMediaKit/build-riscv64/release/linux/Release/MediaServer
+# ZLMediaKit CMake 输出到源码根的 release/ 目录
+# 同一时刻只编译一个平台，两个变量指向同一路径
+# build-zlm 会根据当前 PROFILE 选择正确的目标
+_src_zlm_x86   := ZLMediaKit/release/linux/Release/MediaServer
+_src_zlm_riscv := ZLMediaKit/release/linux/Release/MediaServer
 _dst_zlm_x86   := $(EMBED_DIR)/ZLMediaKit-linux-amd64
 _dst_zlm_riscv := $(EMBED_DIR)/ZLMediaKit-linux-riscv64
 
@@ -343,6 +344,5 @@ help:
 	@echo "  make build-zlm CHECK=1               # 仅检查 ZLM，返回 exit code"
 	@echo ""
 	@echo "ZLMediaKit 二进制说明:"
-	@echo "  x86_64:  ZLMediaKit/release/linux/Release/MediaServer"
-	@echo "  riscv64: ZLMediaKit/build-riscv64/release/linux/Release/MediaServer"
+	@echo "  编译产物: ZLMediaKit/release/linux/Release/MediaServer"
 	@echo "  重新编译: make zlm-x86 或 make zlm-riscv64"

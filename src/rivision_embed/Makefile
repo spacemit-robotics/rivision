@@ -130,21 +130,31 @@ ORT_RISCV_INCLUDE := $(CURDIR)/third_party/spacemit-ort-current/include
 
 build-riscv64:
 	@echo "[build] RISC-V (K3 Spacemit A100 NPU) 编译..."
-	@if [ ! -x "$(K3_CC)" ]; then \
-		echo "⚠️  K3 工具链未找到: $(K3_CC)"; \
-		echo "   工具链应位于: ../../tools/spacemit-toolchain-linux-glibc-x86_64-v1.2.2/"; \
-		echo "   或设置 SPACEMIT_TOOLCHAIN 环境变量"; \
-		exit 1; \
-	fi
 	@mkdir -p $(BUILD_DIR)
-	@CGO_ENABLED=1 GOOS=linux GOARCH=riscv64 \
-		CC="$(K3_CC)" \
-		CXX="$(K3_CXX)" \
-		CGO_CFLAGS="$(K3_CFLAGS) -I$(ORT_RISCV_INCLUDE)" \
-		CGO_CXXFLAGS="-std=c++17 $(K3_CFLAGS) -I$(ORT_RISCV_INCLUDE)" \
-		CGO_LDFLAGS="-L$(ORT_RISCV_LIB) -lonnxruntime -lspacemit_ep -lstdc++" \
-		go build $(LDFLAGS) -o $(BUILD_DIR)/rivision-embed-server-linux-riscv64 ./cmd/server
-	@echo "[build] 完成 (使用 K3 Spacemit 工具链, 支持 A100 NPU)"
+	@ARCH=$$(uname -m); \
+	if [ "$$ARCH" = "riscv64" ]; then \
+		echo "[build] 检测到 RISC-V 原生环境，使用系统编译器"; \
+		CGO_ENABLED=1 \
+			CGO_CFLAGS="-I$(ORT_RISCV_INCLUDE)" \
+			CGO_CXXFLAGS="-std=c++17 -I$(ORT_RISCV_INCLUDE)" \
+			CGO_LDFLAGS="-L$(ORT_RISCV_LIB) -lonnxruntime -lspacemit_ep -lstdc++" \
+			go build $(LDFLAGS) -o $(BUILD_DIR)/rivision-embed-server-linux-riscv64 ./cmd/server; \
+	else \
+		if [ ! -x "$(K3_CC)" ]; then \
+			echo "⚠️  K3 工具链未找到: $(K3_CC)"; \
+			echo "   工具链应位于: ../../tools/spacemit-toolchain-linux-glibc-x86_64-v1.2.2/"; \
+			echo "   或设置 SPACEMIT_TOOLCHAIN 环境变量"; \
+			exit 1; \
+		fi; \
+		CGO_ENABLED=1 GOOS=linux GOARCH=riscv64 \
+			CC="$(K3_CC)" \
+			CXX="$(K3_CXX)" \
+			CGO_CFLAGS="$(K3_CFLAGS) -I$(ORT_RISCV_INCLUDE)" \
+			CGO_CXXFLAGS="-std=c++17 $(K3_CFLAGS) -I$(ORT_RISCV_INCLUDE)" \
+			CGO_LDFLAGS="-L$(ORT_RISCV_LIB) -lonnxruntime -lspacemit_ep -lstdc++" \
+			go build $(LDFLAGS) -o $(BUILD_DIR)/rivision-embed-server-linux-riscv64 ./cmd/server; \
+	fi
+	@echo "[build] 完成"
 
 test-server:
 	@cd $(DIST_DIR) && ./scripts/start-embed.sh

@@ -1,0 +1,51 @@
+[Unit]
+Description=RiVision CLI Web UI
+After=network.target rivision-gateway.service
+Wants=rivision-gateway.service
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_cli
+
+EnvironmentFile=-/opt/rivision/shared/.env
+EnvironmentFile=-/opt/rivision/rivision_cli/config/.env
+
+# ============================================================
+# rivision-cli webui 参数 (通过 .env 文件覆盖)
+# ============================================================
+# CLI_PORT: Web UI 端口 (默认 8280)
+# CLI_GATEWAY_URL: Gateway 地址 (默认 http://localhost:8081)
+# CLI_MP4_DIR: MP4 存储目录 (默认 /opt/rivision/rivision_cli/mp4path)
+# CLI_VLM_TRIGGER: VLM 触发模式 (默认 interval)
+# CLI_YOLO_MODE: YOLO 模式 (默认 distributed)
+# OWL_URL: OWL (GB28181) 服务地址，留空则禁用 (默认 http://127.0.0.1:15123)
+# OWL_USER / OWL_PASS: OWL 用户名密码
+# OWL_RSA: 设为1则启用 RSA 加密登录 (生产环境)
+# ============================================================
+ExecStart=/bin/bash -c '/opt/rivision/rivision_cli/bin/rivision-cli webui \
+    --port ${CLI_PORT:-8280} \
+    --gateway-url ${CLI_GATEWAY_URL:-http://localhost:8081} \
+    --with-go2rtc \
+    --with-rtsp-server \
+    --mp4-dir ${CLI_MP4_DIR:-/opt/rivision/rivision_cli/mp4path} \
+    --no-browser \
+    --enable-yolo \
+    --yolo-mode ${CLI_YOLO_MODE:-distributed} \
+    --vlm-trigger ${CLI_VLM_TRIGGER:-interval} \
+    --owl-url "${OWL_URL:-http://127.0.0.1:15123}" \
+    --owl-user ${OWL_USER:-admin} \
+    --owl-pass ${OWL_PASS:-admin} \
+    $( [ "${OWL_RSA:-0}" = "1" ] && echo "--owl-rsa" )'
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-cli
+
+[Install]
+WantedBy=multi-user.target
