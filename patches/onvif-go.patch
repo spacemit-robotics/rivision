@@ -1,3 +1,9 @@
+# RiVision ONVIF-Go Patch
+# Target: https://github.com/0x524a/onvif-go.git
+# Commit: b31341bc31f071095ac78f51c8a1b06ae172dfdb (v1.1.4)
+# Apply:  cd prj_dir && patch -p3 < patches/onvif-go.patch
+# Generate: diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=build --exclude=data --exclude=logs --exclude=tmp --exclude=cover src/rivision_owl/onvif-go /tmp/rivision_owl_backup/onvif-go > patches/onvif-go.patch
+#
 diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/onvif-go/go.mod /tmp/rivision_owl_backup/onvif-go/go.mod
 --- src/rivision_owl/onvif-go/go.mod	2026-04-29 09:34:14.645001352 +0800
 +++ /tmp/rivision_owl_backup/onvif-go/go.mod	2026-04-11 22:57:15.000000000 +0800

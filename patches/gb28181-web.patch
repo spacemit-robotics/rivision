@@ -1,3 +1,9 @@
+# RiVision GB28181-Web Patch
+# Target: https://github.com/gowvp/gb28181_web.git
+# Commit: cf4eb5fa675a584774399434eaf55825814d9097 (latest)
+# Apply:  cd prj_dir && patch -p3 < patches/gb28181-web.patch
+# Generate: diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=build --exclude=data --exclude=logs --exclude=tmp --exclude=cover src/rivision_owl/gb28181-web /tmp/rivision_owl_backup/gb28181-web > patches/gb28181-web.patch
+#
 diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/gb28181-web/app/app.css /tmp/rivision_owl_backup/gb28181-web/app/app.css
 --- src/rivision_owl/gb28181-web/app/app.css	2026-04-29 09:34:00.723952733 +0800
 +++ /tmp/rivision_owl_backup/gb28181-web/app/app.css	2026-04-05 15:22:38.000000000 +0800

@@ -1,8 +1,0 @@
-#!/bin/bash
-# ============================================================
-# YOLO HTTP Server 启动器 (K3 RISC-V)
-# ============================================================
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
-exec "$SCRIPT_DIR/bin/yolo-server.riscv64" "$@"

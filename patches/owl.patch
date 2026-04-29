@@ -1,3 +1,9 @@
+# RiVision OWL Patch
+# Target: https://github.com/gowvp/owl.git
+# Commit: 4026d254aaf4217c4ff0c9d57b0b4897a8128977 (v1.1.0-47-g4026d25)
+# Apply:  cd prj_dir && patch -p3 < patches/owl.patch
+# Generate: diff -ruN --exclude=.git --exclude=node_modules --exclude=dist --exclude=build --exclude=data --exclude=logs --exclude=tmp --exclude=cover src/rivision_owl/owl /tmp/rivision_owl_backup/owl > patches/owl.patch
+#
 diff -ruN '--exclude=.git' '--exclude=node_modules' '--exclude=dist' '--exclude=build' '--exclude=data' '--exclude=logs' '--exclude=tmp' '--exclude=cover' src/rivision_owl/owl/configs/config.toml /tmp/rivision_owl_backup/owl/configs/config.toml
 --- src/rivision_owl/owl/configs/config.toml	2026-04-29 09:34:26.828845865 +0800
 +++ /tmp/rivision_owl_backup/owl/configs/config.toml	2026-04-05 17:06:11.000000000 +0800

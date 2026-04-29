@@ -14,7 +14,7 @@ BUILD_CACHE="$ROOT/.cache/go2rtc"
 TARGET_DIR="$ROOT/src/rivision_cli/internal/embed/binaries"
 ARCH="$(uname -m)"
 GO2RTC_REPO="https://github.com/AlexxIT/go2rtc.git"
-GO2RTC_VERSION="v1.9.8"
+GO2RTC_VERSION="v1.9.14"
 
 # 架构映射
 case "$ARCH" in
