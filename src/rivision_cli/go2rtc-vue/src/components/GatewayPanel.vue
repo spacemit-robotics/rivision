@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 <template>
   <Transition name="drawer">
     <div class="gateway-drawer" v-if="visible">

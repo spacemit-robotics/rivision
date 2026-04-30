@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * MSE (Media Source Extensions) 直播流播放器 — WebSocket 传输
  *
