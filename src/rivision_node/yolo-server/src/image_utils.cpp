@@ -4,23 +4,21 @@
  */
 
 #include "image_utils.h"
-#include <cstring>
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 #include <stdexcept>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "../third_party/stb/stb_image.h"
+#include "../components/thirdparty/stb/stb_image.h"
 
 namespace image {
 
 // ============ Base64 解码 ============
-static const char BASE64_CHARS[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char BASE64_CHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static inline bool is_base64(unsigned char c) {
-    return (isalnum(c) || (c == '+') || (c == '/'));
-}
+static inline bool is_base64(unsigned char c) { return (isalnum(c) || (c == '+') || (c == '/')); }
 
 std::string base64_decode(const std::string& encoded) {
     int in_len = encoded.size();
@@ -29,27 +27,23 @@ std::string base64_decode(const std::string& encoded) {
     std::string ret;
 
     while (in_len-- && (encoded[in_] != '=') && is_base64(encoded[in_])) {
-        char_array_4[i++] = encoded[in_]; in_++;
+        char_array_4[i++] = encoded[in_];
+        in_++;
         if (i == 4) {
-            for (i = 0; i < 4; i++)
-                char_array_4[i] = std::string(BASE64_CHARS).find(char_array_4[i]);
+            for (i = 0; i < 4; i++) char_array_4[i] = std::string(BASE64_CHARS).find(char_array_4[i]);
             char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
             char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
             char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-            for (i = 0; i < 3; i++)
-                ret += char_array_3[i];
+            for (i = 0; i < 3; i++) ret += char_array_3[i];
             i = 0;
         }
     }
     if (i) {
-        for (j = i; j < 4; j++)
-            char_array_4[j] = 0;
-        for (j = 0; j < 4; j++)
-            char_array_4[j] = std::string(BASE64_CHARS).find(char_array_4[j]);
+        for (j = i; j < 4; j++) char_array_4[j] = 0;
+        for (j = 0; j < 4; j++) char_array_4[j] = std::string(BASE64_CHARS).find(char_array_4[j]);
         char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
         char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-        for (j = 0; j < i - 1; j++)
-            ret += char_array_3[j];
+        for (j = 0; j < i - 1; j++) ret += char_array_3[j];
     }
     return ret;
 }
@@ -60,8 +54,7 @@ bool decode_jpeg(const std::vector<uint8_t>& jpeg_data, ImageData& out) {
 
     int width, height, channels;
     unsigned char* pixels = stbi_load_from_memory(
-        jpeg_data.data(), static_cast<int>(jpeg_data.size()),
-        &width, &height, &channels, 3  // 强制 RGB 3通道
+        jpeg_data.data(), static_cast<int>(jpeg_data.size()), &width, &height, &channels, 3  // 强制 RGB 3通道
     );
 
     if (!pixels) {
@@ -79,13 +72,10 @@ bool decode_jpeg(const std::vector<uint8_t>& jpeg_data, ImageData& out) {
 }
 
 // ============ Letterbox Resize + Normalize (YOLO 预处理) ============
-std::vector<float> resize_and_normalize(const ImageData& img,
-                                         int target_width, int target_height) {
+std::vector<float> resize_and_normalize(const ImageData& img, int target_width, int target_height) {
     // Letterbox: 保持宽高比缩放，空白区域填充 114/255
-    float scale = std::min(
-        static_cast<float>(target_width) / img.width,
-        static_cast<float>(target_height) / img.height
-    );
+    float scale =
+        std::min(static_cast<float>(target_width) / img.width, static_cast<float>(target_height) / img.height);
     int new_w = static_cast<int>(img.width * scale);
     int new_h = static_cast<int>(img.height * scale);
     int pad_x = (target_width - new_w) / 2;

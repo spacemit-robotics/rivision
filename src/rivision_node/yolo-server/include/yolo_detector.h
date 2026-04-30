@@ -5,16 +5,16 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include <memory>
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <mutex>
 #include <queue>
-#include <condition_variable>
-#include <atomic>
+#include <string>
 #include <thread>
-#include <functional>
+#include <vector>
 
 namespace yolo {
 
@@ -33,24 +33,23 @@ struct DetectionResult {
 };
 
 class YOLODetector {
-public:
+   public:
     YOLODetector();
     ~YOLODetector();
-    
+
     bool load(const std::string& model_path);
     DetectionResult detect(const std::vector<uint8_t>& jpeg_data);
-    
+
     // ★ 从预处理后的张量直接推理 (用于流水线模式)
-    DetectionResult detect_from_tensor(const std::vector<float>& tensor,
-                                       int orig_width, int orig_height);
-    
+    DetectionResult detect_from_tensor(const std::vector<float>& tensor, int orig_width, int orig_height);
+
     bool is_loaded() const { return loaded_; }
-    
-private:
+
+   private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
     bool loaded_ = false;
-    
+
     std::vector<float> preprocess(const std::vector<uint8_t>& jpeg_data, int& orig_width, int& orig_height);
     std::vector<Detection> postprocess(const std::vector<float>& output, int orig_width, int orig_height);
 };
@@ -59,21 +58,21 @@ private:
 // 每个 Worker 有独立的 YOLODetector (独立 ONNX Session)
 // 解决单 Session 串行化问题，充分利用 K3 多核 + NPU
 class YOLOWorkerPool {
-public:
+   public:
     YOLOWorkerPool(int num_workers = 2);
     ~YOLOWorkerPool();
-    
+
     bool load(const std::string& model_path);
     DetectionResult detect(const std::vector<uint8_t>& jpeg_data);
     bool is_loaded() const { return loaded_; }
     int get_num_workers() const { return num_workers_; }
     int get_active_workers() const { return active_workers_.load(); }
-    
-private:
+
+   private:
     int num_workers_;
     std::string model_path_;
     bool loaded_ = false;
-    
+
     // Worker 管理
     std::vector<std::unique_ptr<YOLODetector>> detectors_;
     std::vector<std::mutex> detector_mutexes_;  // 每个 detector 一个锁

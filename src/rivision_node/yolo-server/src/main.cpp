@@ -3,20 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "yolo_detector.h"
-#include "yolo_pipeline.h"
-#include "http_server.h"
-#include "image_utils.h"
+#include <signal.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <signal.h>
-#include <sstream>
 #include <memory>
+#include <sstream>
+
+#include "http_server.h"
+#include "image_utils.h"
+#include "yolo_detector.h"
+#include "yolo_pipeline.h"
 
 // ★ 抽象检测器接口，支持 WorkerPool 和 Pipeline 两种模式
 class IDetector {
-public:
+   public:
     virtual ~IDetector() = default;
     virtual bool load(const std::string& model_path) = 0;
     virtual yolo::DetectionResult detect(const std::vector<uint8_t>& jpeg_data) = 0;
@@ -28,7 +30,7 @@ public:
 
 // WorkerPool 模式适配器
 class WorkerPoolDetector : public IDetector {
-public:
+   public:
     explicit WorkerPoolDetector(int workers) : pool_(workers) {}
     bool load(const std::string& model_path) override { return pool_.load(model_path); }
     yolo::DetectionResult detect(const std::vector<uint8_t>& jpeg_data) override { return pool_.detect(jpeg_data); }
@@ -36,22 +38,23 @@ public:
     int get_workers() const override { return pool_.get_num_workers(); }
     int get_active() const override { return pool_.get_active_workers(); }
     std::string get_mode() const override { return "worker_pool"; }
-private:
+
+   private:
     yolo::YOLOWorkerPool pool_;
 };
 
 // Pipeline 模式适配器 (★ K3 优化: 预处理流水线保持 NPU 忙碌)
 class PipelineDetector : public IDetector {
-public:
-    explicit PipelineDetector(int preproc_threads, int queue_size) 
-        : pipeline_(preproc_threads, queue_size) {}
+   public:
+    explicit PipelineDetector(int preproc_threads, int queue_size) : pipeline_(preproc_threads, queue_size) {}
     bool load(const std::string& model_path) override { return pipeline_.load(model_path); }
     yolo::DetectionResult detect(const std::vector<uint8_t>& jpeg_data) override { return pipeline_.detect(jpeg_data); }
     bool is_loaded() const override { return pipeline_.is_loaded(); }
     int get_workers() const override { return 1; }  // Pipeline 模式单 Session
     int get_active() const override { return pipeline_.get_active_preproc(); }
     std::string get_mode() const override { return "pipeline"; }
-private:
+
+   private:
     yolo::YOLOPipeline pipeline_;
 };
 
@@ -66,12 +69,23 @@ std::string escape_json(const std::string& s) {
     std::string result;
     for (char c : s) {
         switch (c) {
-            case '"': result += "\\\""; break;
-            case '\\': result += "\\\\"; break;
-            case '\n': result += "\\n"; break;
-            case '\r': result += "\\r"; break;
-            case '\t': result += "\\t"; break;
-            default: result += c;
+            case '"':
+                result += "\\\"";
+                break;
+            case '\\':
+                result += "\\\\";
+                break;
+            case '\n':
+                result += "\\n";
+                break;
+            case '\r':
+                result += "\\r";
+                break;
+            case '\t':
+                result += "\\t";
+                break;
+            default:
+                result += c;
         }
     }
     return result;
@@ -130,7 +144,7 @@ int main(int argc, char* argv[]) {
     if (env_mode && std::string(env_mode) == "pipeline") {
         mode = "pipeline";
     }
-    
+
     // ★ P7: 从环境变量读取 worker 数量 (默认 2，K3 建议 2-4)
     int num_workers = 2;
     const char* env_workers = std::getenv("YOLO_WORKERS");
@@ -165,7 +179,7 @@ int main(int argc, char* argv[]) {
         // WorkerPool 模式: 多 Session 并发 (默认)
         detector = std::make_unique<WorkerPoolDetector>(num_workers);
     }
-    
+
     if (!detector->load(model_path)) {
         fprintf(stderr, "[ERROR] Failed to load model: %s\n", model_path.c_str());
         return 1;
@@ -206,91 +220,87 @@ int main(int argc, char* argv[]) {
     // 省去: Gateway base64_encode (~1-3ms) + yolo-server base64_decode (~1-2ms)
     // 对于 4 摄像头 × 15fps，节省 120-300ms/秒
     server.post("/api/detect/binary", [&detector](const http::Request& req, http::Response& res) {
-      try {
-        if (req.body.empty()) {
-            res.status_code = 400;
-            res.set_json("{\"success\":false,\"error\":\"empty body\"}");
-            return;
-        }
+        try {
+            if (req.body.empty()) {
+                res.status_code = 400;
+                res.set_json("{\"success\":false,\"error\":\"empty body\"}");
+                return;
+            }
 
-        // 直接使用原始二进制数据
-        std::vector<uint8_t> jpeg_data(req.body.begin(), req.body.end());
-        auto result = detector->detect(jpeg_data);
+            // 直接使用原始二进制数据
+            std::vector<uint8_t> jpeg_data(req.body.begin(), req.body.end());
+            auto result = detector->detect(jpeg_data);
 
-        std::ostringstream json;
-        json << "{\"success\":" << (result.success ? "true" : "false");
-        json << ",\"detections\":[";
-        for (size_t i = 0; i < result.detections.size(); i++) {
-            const auto& det = result.detections[i];
-            if (i > 0) json << ",";
-            json << "{\"bbox\":[" << det.x1 << "," << det.y1 << ","
-                 << det.x2 << "," << det.y2 << "]";
-            json << ",\"class_id\":" << det.class_id;
-            json << ",\"class_name\":\"" << det.class_name << "\"";
-            json << ",\"confidence\":" << det.confidence << "}";
-        }
-        json << "],\"inference_ms\":" << result.inference_ms;
-        if (!result.error.empty()) {
-            json << ",\"error\":\"" << escape_json(result.error) << "\"";
-        }
-        json << "}";
-        res.set_json(json.str());
+            std::ostringstream json;
+            json << "{\"success\":" << (result.success ? "true" : "false");
+            json << ",\"detections\":[";
+            for (size_t i = 0; i < result.detections.size(); i++) {
+                const auto& det = result.detections[i];
+                if (i > 0) json << ",";
+                json << "{\"bbox\":[" << det.x1 << "," << det.y1 << "," << det.x2 << "," << det.y2 << "]";
+                json << ",\"class_id\":" << det.class_id;
+                json << ",\"class_name\":\"" << det.class_name << "\"";
+                json << ",\"confidence\":" << det.confidence << "}";
+            }
+            json << "],\"inference_ms\":" << result.inference_ms;
+            if (!result.error.empty()) {
+                json << ",\"error\":\"" << escape_json(result.error) << "\"";
+            }
+            json << "}";
+            res.set_json(json.str());
 
-        printf("[YOLO] binary %zu objects in %dms\n",
-               result.detections.size(), result.inference_ms);
-      } catch (const std::exception& e) {
-        fprintf(stderr, "[ERROR] %s\n", e.what());
-        res.status_code = 500;
-        res.set_json("{\"success\":false,\"error\":\"" + escape_json(e.what()) + "\"}");
-      } catch (...) {
-        res.status_code = 500;
-        res.set_json("{\"success\":false,\"error\":\"unknown error\"}");
-      }
+            printf("[YOLO] binary %zu objects in %dms\n", result.detections.size(), result.inference_ms);
+        } catch (const std::exception& e) {
+            fprintf(stderr, "[ERROR] %s\n", e.what());
+            res.status_code = 500;
+            res.set_json("{\"success\":false,\"error\":\"" + escape_json(e.what()) + "\"}");
+        } catch (...) {
+            res.status_code = 500;
+            res.set_json("{\"success\":false,\"error\":\"unknown error\"}");
+        }
     });
 
     // 检测端点 (兼容旧接口，使用 base64)
     server.post("/api/detect", [&detector](const http::Request& req, http::Response& res) {
-      try {
-        std::string image_base64 = parse_json_string(req.body, "image");
-        if (image_base64.empty()) {
-            res.status_code = 400;
-            res.set_json("{\"success\":false,\"error\":\"missing image field\"}");
-            return;
-        }
+        try {
+            std::string image_base64 = parse_json_string(req.body, "image");
+            if (image_base64.empty()) {
+                res.status_code = 400;
+                res.set_json("{\"success\":false,\"error\":\"missing image field\"}");
+                return;
+            }
 
-        auto decoded = image::base64_decode(image_base64);
-        std::vector<uint8_t> jpeg_data(decoded.begin(), decoded.end());
-        auto result = detector->detect(jpeg_data);
+            auto decoded = image::base64_decode(image_base64);
+            std::vector<uint8_t> jpeg_data(decoded.begin(), decoded.end());
+            auto result = detector->detect(jpeg_data);
 
-        std::ostringstream json;
-        json << "{\"success\":" << (result.success ? "true" : "false");
-        json << ",\"detections\":[";
-        for (size_t i = 0; i < result.detections.size(); i++) {
-            const auto& det = result.detections[i];
-            if (i > 0) json << ",";
-            json << "{\"bbox\":[" << det.x1 << "," << det.y1 << ","
-                 << det.x2 << "," << det.y2 << "]";
-            json << ",\"class_id\":" << det.class_id;
-            json << ",\"class_name\":\"" << det.class_name << "\"";
-            json << ",\"confidence\":" << det.confidence << "}";
-        }
-        json << "],\"inference_ms\":" << result.inference_ms;
-        if (!result.error.empty()) {
-            json << ",\"error\":\"" << escape_json(result.error) << "\"";
-        }
-        json << "}";
-        res.set_json(json.str());
+            std::ostringstream json;
+            json << "{\"success\":" << (result.success ? "true" : "false");
+            json << ",\"detections\":[";
+            for (size_t i = 0; i < result.detections.size(); i++) {
+                const auto& det = result.detections[i];
+                if (i > 0) json << ",";
+                json << "{\"bbox\":[" << det.x1 << "," << det.y1 << "," << det.x2 << "," << det.y2 << "]";
+                json << ",\"class_id\":" << det.class_id;
+                json << ",\"class_name\":\"" << det.class_name << "\"";
+                json << ",\"confidence\":" << det.confidence << "}";
+            }
+            json << "],\"inference_ms\":" << result.inference_ms;
+            if (!result.error.empty()) {
+                json << ",\"error\":\"" << escape_json(result.error) << "\"";
+            }
+            json << "}";
+            res.set_json(json.str());
 
-        printf("[YOLO] %zu objects in %dms\n",
-               result.detections.size(), result.inference_ms);
-      } catch (const std::exception& e) {
-        fprintf(stderr, "[ERROR] %s\n", e.what());
-        res.status_code = 500;
-        res.set_json("{\"success\":false,\"error\":\"" + escape_json(e.what()) + "\"}");
-      } catch (...) {
-        res.status_code = 500;
-        res.set_json("{\"success\":false,\"error\":\"unknown error\"}");
-      }
+            printf("[YOLO] %zu objects in %dms\n", result.detections.size(), result.inference_ms);
+        } catch (const std::exception& e) {
+            fprintf(stderr, "[ERROR] %s\n", e.what());
+            res.status_code = 500;
+            res.set_json("{\"success\":false,\"error\":\"" + escape_json(e.what()) + "\"}");
+        } catch (...) {
+            res.status_code = 500;
+            res.set_json("{\"success\":false,\"error\":\"unknown error\"}");
+        }
     });
 
     printf("[YOLO Server] Starting...\n");

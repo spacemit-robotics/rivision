@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include <string>
 #include <functional>
-#include <memory>
 #include <map>
+#include <memory>
+#include <string>
 
 namespace http {
 
@@ -23,7 +23,7 @@ struct Response {
     int status_code = 200;
     std::map<std::string, std::string> headers;
     std::string body;
-    
+
     void set_json(const std::string& json) {
         headers["Content-Type"] = "application/json";
         body = json;
@@ -33,17 +33,17 @@ struct Response {
 using RequestHandler = std::function<void(const Request&, Response&)>;
 
 class Server {
-public:
+   public:
     Server();
     ~Server();
-    
+
     void get(const std::string& path, RequestHandler handler);
     void post(const std::string& path, RequestHandler handler);
-    
+
     bool listen(const std::string& host, int port);
     void stop();
-    
-private:
+
+   private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

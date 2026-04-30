@@ -23,7 +23,8 @@ int SpaceMIT_EnvInit(void);
 // options: ORT session options handle
 // num_threads: number of threads for EP (0 for default)
 // Returns 0 on success, non-zero on failure
-int SpaceMIT_AttachToSessionOptions(OrtSessionOptions* options, int num_threads);
+int SpaceMIT_AttachToSessionOptions(OrtSessionOptions *options,
+                                    int num_threads);
 
 // Check if SpaceMIT EP is available
 // Returns 1 if available, 0 otherwise
