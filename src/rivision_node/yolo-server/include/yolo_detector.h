@@ -59,7 +59,7 @@ class YOLODetector {
 // 解决单 Session 串行化问题，充分利用 K3 多核 + NPU
 class YOLOWorkerPool {
    public:
-    YOLOWorkerPool(int num_workers = 2);
+    explicit YOLOWorkerPool(int num_workers = 2);
     ~YOLOWorkerPool();
 
     bool load(const std::string& model_path);

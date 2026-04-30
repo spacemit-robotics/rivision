@@ -6,6 +6,11 @@
 #include "yolo_pipeline.h"
 
 #include <chrono>
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "image_utils.h"
 

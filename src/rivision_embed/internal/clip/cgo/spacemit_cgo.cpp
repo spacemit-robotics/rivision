@@ -7,9 +7,14 @@
 // Compiled only on RISC-V K3 platform with SpaceMIT toolchain
 
 #include "spacemit_cgo.h"
-#include "spacemit_ort_env.h"
+
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
+#include <string>
+#include <unordered_map>
+
+#include "spacemit_ort_env.h"
 
 // Global flag to track initialization
 static bool g_spacemit_initialized = false;

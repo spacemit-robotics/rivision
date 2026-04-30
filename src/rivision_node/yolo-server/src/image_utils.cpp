@@ -7,8 +7,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../components/thirdparty/stb/stb_image.h"
@@ -53,9 +56,9 @@ bool decode_jpeg(const std::vector<uint8_t>& jpeg_data, ImageData& out) {
     if (jpeg_data.empty()) return false;
 
     int width, height, channels;
-    unsigned char* pixels = stbi_load_from_memory(
-        jpeg_data.data(), static_cast<int>(jpeg_data.size()), &width, &height, &channels, 3  // 强制 RGB 3通道
-    );
+    // 强制 RGB 3 通道
+    unsigned char* pixels = stbi_load_from_memory(jpeg_data.data(),
+        static_cast<int>(jpeg_data.size()), &width, &height, &channels, 3);
 
     if (!pixels) {
         printf("[image_utils] JPEG decode failed: %s\n", stbi_failure_reason());

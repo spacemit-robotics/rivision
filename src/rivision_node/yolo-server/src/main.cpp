@@ -10,6 +10,8 @@
 #include <cstring>
 #include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "http_server.h"
 #include "image_utils.h"

@@ -11,12 +11,17 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdio>
 #include <cstring>
 #include <functional>
+#include <map>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <sstream>
+#include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 // ============================================================

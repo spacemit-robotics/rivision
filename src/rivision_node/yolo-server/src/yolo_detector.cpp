@@ -8,6 +8,12 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "image_utils.h"
 
@@ -236,7 +242,8 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
     }
 
     // Letterbox 参数还原
-    float scale = std::min((float)impl_->input_w / orig_width, (float)impl_->input_h / orig_height);
+    float scale = std::min(static_cast<float>(impl_->input_w) / orig_width,
+                          static_cast<float>(impl_->input_h) / orig_height);
     float new_w = orig_width * scale;
     float new_h = orig_height * scale;
     float pad_x = (impl_->input_w - new_w) / 2.0f;
@@ -278,7 +285,7 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
 
         det.confidence = max_conf;
         det.class_id = max_class;
-        det.class_name = (max_class < (int)COCO_CLASSES.size()) ? COCO_CLASSES[max_class] : "unknown";
+        det.class_name = (max_class < static_cast<int>(COCO_CLASSES.size())) ? COCO_CLASSES[max_class] : "unknown";
         detections.push_back(det);
 
         // ★ 限制 NMS 前的检测数量，防止 O(n²) 爆炸
