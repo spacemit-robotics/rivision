@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // RTSP Server 模块 - 使用 mediamtx 作为 RTSP 服务器，FFmpeg 推流
 package main
 

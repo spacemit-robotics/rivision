@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package client 提供智能推理客户端
 package client
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // spacemit_cgo.cpp - C++ implementation of SpaceMIT EP wrapper
 // Compiled only on RISC-V K3 platform with SpaceMIT toolchain
 
