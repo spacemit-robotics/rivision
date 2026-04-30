@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // YOLO WebSocket 服务 - 连接后端 YOLO 检测结果推送
 import { ref, reactive } from 'vue'
 

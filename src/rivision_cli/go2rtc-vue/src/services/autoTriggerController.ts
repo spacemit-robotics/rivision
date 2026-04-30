@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * 自动触发控制器
  * 针对情况3 (A << B) 的智能触发策略

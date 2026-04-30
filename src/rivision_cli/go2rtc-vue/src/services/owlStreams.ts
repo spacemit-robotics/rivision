@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * owlStreams.ts — Unified camera stream source for go2rtc-vue
  *
