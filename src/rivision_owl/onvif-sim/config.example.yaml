@@ -1,0 +1,83 @@
+# ============================================================
+# onvif-sim 多通道配置文件
+# ============================================================
+# 使用方法: ./onvif-sim -c config.yaml
+#
+# server   -> ONVIF 服务器配置 (含内置 RTSP 服务器端口)
+# auth     -> 认证信息（与 OWL 添加设备时填写的一致）
+# profiles -> 每路摄像头，name 为名称，source 为视频源
+# ============================================================
+# 
+# 架构说明 (v2.0 - 内置 RTSP Server)：
+#   onvif-sim 现在内置 RTSP 服务器，可直接读取视频文件并输出 RTSP 流
+#   
+#   数据流：
+#     视频文件 → FFmpeg → 内置 RTSP Server → ONVIF GetStreamUri → OWL → go2rtc
+#   
+#   对比 gb28181-sim：
+#     gb28181-sim: 主动推流 (读取文件 → GB28181/RTP → OWL/zlmediakit → go2rtc)
+#     onvif-sim:   被动响应 (读取文件 → 内置RTSP → OWL发现 → go2rtc拉流)
+#
+# ============================================================
+
+server:
+  host: "0.0.0.0"        # 监听地址
+  port: 15188            # ONVIF 服务端口
+  rtsp_port: 18555       # 内置 RTSP 服务端口 (避免与 rivision-cli 18554 冲突)
+  verbose: false         # 详细日志
+
+# 认证信息
+auth:
+  username: "admin"      # 用户名
+  password: "admin"      # 密码
+
+# 设备信息
+device:
+  manufacturer: "RiVision"
+  model: "ONVIF-Sim Virtual Camera"
+  serial: "ONVIF-SIM-001"
+
+# 功能开关
+features:
+  ptz: true              # PTZ 云台控制
+  imaging: true          # 图像调整
+  discovery: true        # WS-Discovery 自动发现
+
+# ============================================================
+# 通道列表 - source 类型：
+#   file:///path/to/video.mp4  - 本地视频文件（内置 RTSP 服务器输出）
+#   rtsp://host:port/path      - 外部 RTSP 流（直接返回此地址）
+#   test                       - 测试图案（FFmpeg 生成）
+# ============================================================
+profiles:
+  - name: "大门监控"
+    width: 1920
+    height: 1080
+    framerate: 30
+    bitrate: 4096
+    source: "file:///opt/rivision-owl/mp4path/cam1.mp4"
+    ptz: true
+
+  - name: "停车场"
+    width: 1280
+    height: 720
+    framerate: 30
+    bitrate: 2048
+    source: "file:///opt/rivision-owl/mp4path/cam2.mp4"
+    ptz: false
+
+  - name: "办公区"
+    width: 1920
+    height: 1080
+    framerate: 25
+    bitrate: 6144
+    source: "file:///opt/rivision-owl/mp4path/cam3.mp4"
+    ptz: true
+
+  - name: "测试通道"
+    width: 1920
+    height: 1080
+    framerate: 30
+    bitrate: 4096
+    source: "test"   # 测试图案
+    ptz: false

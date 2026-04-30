@@ -1,0 +1,85 @@
+# RiVision OWL 配置模板
+# 部署时由 install.sh 根据环境变量替换
+#
+# 【重要】ZLM_SECRET 必须与 ZLM 二进制内置配置保持一致：
+#   - 预编译 x86_64 ZLM 内置: eMkolBseFWMPJ8LgmRX2AVveRVtyZ0eN
+#   - 部署者可自定义，但必须同步修改 ZLM 二进制内置配置
+
+[Server]
+  Debug = false
+  RTMPSecret = '${OWL_RTMP_SECRET:-123}'
+  Username = '${OWL_USERNAME:-admin}'
+  Password = '${OWL_PASSWORD:-admin}'
+
+  [Server.AI]
+    Disabled = true
+    RetainDays = 7
+
+  [Server.HTTP]
+    Port = ${OWL_HTTP_PORT:-15123}
+    Timeout = '1m0s'
+    JwtSecret = ''  # 通过 .env 的 OWL_JWT_SECRET 覆盖；不设置则使用自动生成的随机值
+
+    [Server.HTTP.PProf]
+      Enabled = false
+      AccessIps = ['127.0.0.1']
+
+  [Server.Recording]
+    Disabled = false
+    StorageDir = '${OWL_STORAGE_DIR:-/opt/rivision-owl/recordings}'
+    RetainDays = 7
+    DiskUsageThreshold = 95.0
+    SegmentSeconds = 10
+
+[Data]
+  [Data.Database]
+    Dsn = '${OWL_DATA_DIR:-/opt/rivision-owl/data}/owl.db'
+    MaxIdleConns = 10
+    MaxOpenConns = 50
+    ConnMaxLifetime = '6h0m0s'
+    SlowThreshold = '200ms'
+
+[Log]
+  Dir = '${OWL_LOG_DIR:-/opt/rivision-owl/logs}'
+  Level = '${OWL_LOG_LEVEL:-info}'
+  MaxAge = '168h0m0s'
+  RotationTime = '24h0m0s'
+  RotationSize = 100
+
+[Sip]
+  Port = ${OWL_SIP_PORT:-15060}
+  ID = '${OWL_SIP_ID:-34020000002000000001}'
+  Domain = '${OWL_SIP_DOMAIN:-3402000000}'
+  Password = '${OWL_SIP_PASSWORD:-12345678}'
+
+# ===== ZLMediaKit 完整配置 =====
+# 所有字段均通过环境变量覆盖，生产部署请在 .env 中统一配置
+[Media]
+  # 连接层配置
+  # OWL 本机 IP（用于 mediaServerId 标识，开发模式用 127.0.0.1）
+  IP = '${OWL_MEDIA_IP:-127.0.0.1}'
+  # ZLM HTTP API 端口（默认: 8220，与 ZLM 预编译二进制内置值一致）
+  HTTPPort = ${ZLM_HTTP_PORT:-8220}
+  # ZLM HTTP API 密钥（必须与 ZLM 二进制内置配置一致，否则 OWL 无法登录 ZLM）
+  Secret = '${ZLM_SECRET:-eMkolBseFWMPJ8LgmRX2AVveRVtyZ0eN}'
+  Type = 'zlm'
+  # ZLM 回调 OWL 的地址（生产环境填 OWL 真实 IP，不能用 127.0.0.1）
+  WebHookIP = '${OWL_WEBHOOK_IP:-127.0.0.1}'
+  # ZLM RTP 收流端口范围（格式: start-end）
+  RTPPortRange = '${OWL_RTP_PORT_RANGE:-20000-20100}'
+  # ZLM SDP 对外宣告 IP（NAT/跨网段部署时必填）
+  SDPIP = '${OWL_SDP_IP:-127.0.0.1}'
+
+  # ZLM 动态配置参数（Go 层嵌入式模式使用，外部模式由 zlm.ini.template 控制）
+  # FFmpeg 二进制路径
+  FFmpegBin = '${ZLM_FFMPEG_BIN:-/usr/bin/ffmpeg}'
+  # ZLM API 调试模式（生产建议 false）
+  APIDebug = false
+  # 无观众流延迟关闭时间 ms
+  StreamNoneReaderDelayMS = ${ZLM_STREAM_NONE_READER_DELAY_MS:-20000}
+  # 协议开关
+  EnableHLS = true
+  EnableFMP4 = true
+  EnableRTMP = true
+  EnableRTSP = true
+  EnableMP4Record = false

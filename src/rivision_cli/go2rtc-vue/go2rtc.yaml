@@ -1,0 +1,41 @@
+# go2rtc 配置文件 - 开发测试用
+# 启动命令: ./go2rtc -config go2rtc.yaml
+
+api:
+  listen: ":1984"
+
+rtsp:
+  listen: ":8554"
+
+webrtc:
+  listen: ":8555"
+  candidates:
+    - stun:stun.l.google.com:19302
+
+streams:
+  # 测试流 1 - Big Buck Bunny (在线视频)
+  test-1:
+    - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=copy
+
+  # 测试流 2 - Sintel (在线视频)
+  test-2:
+    - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4#video=copy
+
+  # 测试流 3 - Tears of Steel (在线视频)
+  test-3:
+    - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4#video=copy
+
+  # 测试流 4 - Elephant Dream (在线视频)
+  test-4:
+    - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=copy
+
+  # 如果有本地摄像头 (USB)
+  # local-cam:
+  #   - ffmpeg:device?video=0
+
+  # 如果有 RTSP 摄像头
+  # ip-cam-1:
+  #   - rtsp://admin:password@192.168.1.100:554/stream1
+
+log:
+  level: info

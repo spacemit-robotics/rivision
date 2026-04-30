@@ -1,0 +1,37 @@
+[Unit]
+Description=RiVision Node Agent (K3 Node)
+# ★ 修复：使用 network-online.target 等待网络完全就绪（DHCP 获取 IP 后）
+After=network-online.target rivision-llama.service rivision-yolo.service
+Wants=network-online.target rivision-llama.service rivision-yolo.service
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_node
+
+# ============================================================
+# 环境变量 (通过 .env 文件配置)
+# ============================================================
+EnvironmentFile=-/opt/rivision/rivision_node/config/.env
+
+# ============================================================
+# 启动命令
+# ============================================================
+ExecStart=/opt/rivision/rivision_node/scripts/start-node-agent.sh
+
+# 重启策略
+Restart=always
+RestartSec=5
+
+# 安全设置
+# NoNewPrivileges=true
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-node-agent
+
+[Install]
+WantedBy=multi-user.target

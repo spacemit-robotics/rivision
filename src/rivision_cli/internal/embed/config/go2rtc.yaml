@@ -1,0 +1,34 @@
+# go2rtc 默认配置（嵌入版本）
+# 使用外部 ./go2rtc.yaml 可覆盖此配置
+# 配置优先级: ./go2rtc.yaml > 嵌入默认配置
+
+api:
+  listen: ":1984"
+  origin: "*"
+
+rtsp:
+  listen: ":8554"
+  default_query: "video&audio"
+
+webrtc:
+  candidates:
+    - stun:stun.l.google.com:19302
+
+streams:
+  # rtsp_server 模式（配合 --with-rtsp-server 使用）
+  # rtsp_server 自动扫描 mp4path/ 目录，为每个 MP4 文件生成 RTSP 流
+  # 流 URL 格式: rtsp://localhost:18554/{文件名}
+  # 在此处添加需要通过 go2rtc 代理的流：
+  
+  # 示例：从 rtsp_server 拉取流
+  # person:
+  #   - rtsp://localhost:18554/person.mp4
+  # car:
+  #   - rtsp://localhost:18554/car.mp4
+
+  # 可添加真实 IP 摄像头
+  # camera-ip:
+  #   - rtsp://admin:password@192.168.1.100:554/stream1
+
+log:
+  level: info

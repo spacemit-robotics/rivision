@@ -1,0 +1,21 @@
+# Profile: riscv_b_llama
+# RISC-V K3 NPU 模式 - 仅 VLM (llama.cpp)
+# 适用于: 只需要 VLM 图像描述，不需要 YOLO 检测的场景
+
+name: riscv_b_llama
+platform: riscv64
+goarch: riscv64
+
+# 跳过 yolo-server
+yolo_bin: skip
+
+# llama.cpp（预编译 bin/ + lib/ 结构）
+llama_type: prebuilt
+llama_source: third_party/llama.cpp/riscv64-current
+
+# VLM 模型 (仅默认模型，可通过 MODEL_EXTRA 添加更多)
+model_default: models/shared/Qwen3VL
+model_optional:
+
+# 无 YOLO 模型
+model_yolo:

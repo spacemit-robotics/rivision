@@ -1,0 +1,479 @@
+# ============================================================
+# RiVision K3 Deploy - Top-level Build System
+# 统一构建组件: rivision_cli, rivision_gateway, rivision_embed, rivision_owl, rivision_node
+# ============================================================
+
+# 默认目标: release (K3 RISC-V)
+.DEFAULT_GOAL := release
+
+# === 变量定义 ===
+# VERSION 优先级: 1) 命令行指定 2) 环境变量 3) VERSION 文件 4) git tag 5) 默认值
+# 用法示例:
+#   make release VERSION=v1.0.0              # 手动指定版本
+#   VERSION=v1.0.0 make release              # 环境变量指定
+#   echo "1.0.0" > ../VERSION                # 修改 VERSION 文件
+VERSION ?= $(shell cat ../VERSION 2>/dev/null || git describe --tags --always 2>/dev/null || echo "1.0.0")
+TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+NODE_PROFILE ?= riscv_b
+
+# PACKAGE 控制打包内容:
+#   all       - host + node (完整包，默认)
+#   host      - cli, gateway, embed, owl (主机端)
+#   node      - 完整 node (yolo + llama)
+#   node_llama - 仅 llama (VLM 图像描述)
+#   node_yolo  - 仅 yolo (目标检测)
+#   node_all   - 同时打包 3 种 node 变体
+PACKAGE ?= all
+
+SRC_DIR := ../src
+DIST_BASE := ../dist
+CURDIR := $(shell pwd)
+
+# === Go 环境统一配置 ===
+# 所有子项目继承此设置，子项目 Makefile 不再单独设置
+GO_MIN_VERSION := 1.25.0
+export GOPROXY := https://goproxy.cn,https://proxy.golang.org,direct
+export GONOSUMDB := *
+
+# === .PHONY 声明 (集中管理) ===
+.PHONY: help clean check-env check-go
+.PHONY: release
+.PHONY: cli cli-web cli-web-build
+.PHONY: embed
+.PHONY: gateway
+.PHONY: node node-llama node-yolo
+.PHONY: yolo-server
+.PHONY: owl owl-sim owl-gb28181-sim owl-onvif-sim owl-web check-zlm zlm
+
+# ============================================================
+# 环境预检 (check-env)
+# 检查构建和运行所需的全部依赖
+# ============================================================
+check-env:
+	@echo "🔍 检查构建环境..."
+	@echo ""
+	@ERRORS=0; \
+	echo "  --- 构建工具 ---"; \
+	command -v go >/dev/null 2>&1 && { \
+		GO_VER=$$(go version | grep -oP 'go\K[0-9]+\.[0-9]+(\.[0-9]+)?'); \
+		REQ="$(GO_MIN_VERSION)"; \
+		if [ "$$(printf '%s\n' "$$REQ" "$$GO_VER" | sort -V | head -1)" != "$$REQ" ]; then \
+			echo "  ❌ Go 版本过低: $$GO_VER (需要 >= $$REQ)"; \
+			echo "     升级: https://mirrors.aliyun.com/golang/"; \
+			ERRORS=$$((ERRORS+1)); \
+		else \
+			echo "  ✅ Go $$GO_VER (>= $$REQ)"; \
+		fi; \
+	} || { echo "  ❌ Go 未安装 — https://mirrors.aliyun.com/golang/"; ERRORS=$$((ERRORS+1)); }; \
+	command -v cmake >/dev/null 2>&1 && { \
+		CMAKE_VER=$$(cmake --version | head -1 | grep -oP '[0-9]+\.[0-9]+\.[0-9]+'); \
+		echo "  ✅ cmake $$CMAKE_VER"; \
+	} || { echo "  ❌ cmake 未安装 (ZLMediaKit 编译需要) — sudo apt install cmake"; ERRORS=$$((ERRORS+1)); }; \
+	command -v gcc >/dev/null 2>&1 && { \
+		GCC_VER=$$(gcc -dumpversion); \
+		echo "  ✅ gcc $$GCC_VER"; \
+	} || { echo "  ❌ gcc 未安装 (ZLMediaKit/yolo-server 编译需要) — sudo apt install build-essential"; ERRORS=$$((ERRORS+1)); }; \
+	command -v node >/dev/null 2>&1 && { \
+		NODE_VER=$$(node --version); \
+		echo "  ✅ Node.js $$NODE_VER"; \
+	} || { echo "  ⚠️  Node.js 未安装 (Web 前端构建需要)"; }; \
+	echo ""; \
+	echo "  --- 运行时依赖 (必须为 SpaceMIT 定制版) ---"; \
+	if dpkg -s spacemit-onnxruntime >/dev/null 2>&1; then \
+		ORT_VER=$$(dpkg -s spacemit-onnxruntime | grep '^Version:' | awk '{print $$2}'); \
+		echo "  ✅ spacemit-onnxruntime $$ORT_VER (SpacemiT EP 硬件加速)"; \
+	elif dpkg -s libonnxruntime1.23 >/dev/null 2>&1 || ls /usr/lib/libonnxruntime.so* >/dev/null 2>&1; then \
+		echo "  ❌ 检测到上游 ONNX Runtime (无 SpacemiT 硬件加速)"; \
+		echo "     必须替换为: sudo apt install spacemit-onnxruntime"; \
+		ERRORS=$$((ERRORS+1)); \
+	else \
+		echo "  ❌ ONNX Runtime 未安装 (embed/yolo-server 运行需要)"; \
+		echo "     安装: sudo apt install spacemit-onnxruntime"; \
+		ERRORS=$$((ERRORS+1)); \
+	fi; \
+	if dpkg -s llama.cpp-tools-spacemit >/dev/null 2>&1; then \
+		LLAMA_VER=$$(dpkg -s llama.cpp-tools-spacemit | grep '^Version:' | awk '{print $$2}'); \
+		echo "  ✅ llama.cpp-tools-spacemit $$LLAMA_VER (SpacemiT 硬件加速)"; \
+	elif dpkg -s llama.cpp-tools >/dev/null 2>&1; then \
+		LLAMA_VER=$$(dpkg -s llama.cpp-tools | grep '^Version:' | awk '{print $$2}'); \
+		echo "  ❌ 检测到上游 llama.cpp-tools $$LLAMA_VER (无 SpacemiT 硬件加速)"; \
+		echo "     必须替换为: sudo apt install llama.cpp-tools-spacemit"; \
+		ERRORS=$$((ERRORS+1)); \
+	elif command -v llama-server >/dev/null 2>&1; then \
+		echo "  ❌ 检测到手动安装的 llama-server (必须使用 spacemit 包)"; \
+		echo "     安装: sudo apt install llama.cpp-tools-spacemit"; \
+		ERRORS=$$((ERRORS+1)); \
+	else \
+		echo "  ❌ llama-server 未安装 (VLM 推理节点需要)"; \
+		echo "     安装: sudo apt install llama.cpp-tools-spacemit"; \
+		ERRORS=$$((ERRORS+1)); \
+	fi; \
+	echo ""; \
+	echo "  --- 网络 ---"; \
+	echo "  GOPROXY: $${GOPROXY}"; \
+	PROXY_URL=$$(echo "$${GOPROXY}" | cut -d, -f1); \
+	if curl -sf --connect-timeout 5 "$$PROXY_URL" >/dev/null 2>&1; then \
+		echo "  ✅ Go proxy 可达 ($$PROXY_URL)"; \
+	else \
+		echo "  ⚠️  Go proxy ($$PROXY_URL) 不可达，将尝试备用源"; \
+	fi; \
+	echo ""; \
+	if [ $$ERRORS -gt 0 ]; then \
+		echo "  ❌ 发现 $$ERRORS 个必要依赖缺失，请先安装后再构建"; \
+		echo "     运行 ./scripts/setup-env.sh 可自动安装"; \
+		exit 1; \
+	fi; \
+	echo "  ✅ 环境检查通过"
+	@echo ""
+
+# 兼容旧目标名
+check-go: check-env
+
+# ============================================================
+# 完整发布 (Release)
+# ============================================================
+
+# RISC-V K3 发布 (默认目标，K3 上直接编译)
+# 支持 PACKAGE 参数: all(默认), host, node
+# - host: cli, gateway, embed, owl (输出到 riscv64/host/)
+# - node: rivision_node (输出到 riscv64/node/)
+# - all:  host + node (输出到 riscv64/，包含两者)
+#
+# 目录结构:
+#   dist/v1.0.0/riscv64/           # PACKAGE=host 或 node 时 (可增量)
+#   dist/v1.0.0-YYYYMMDD-HHMMSS/riscv64/  # PACKAGE=all 时 (带时间戳)
+#   ├── host/       # 主机端组件
+#   ├── node/       # 算力节点
+#   ├── install.sh
+#   └── checksums.txt
+#
+# 增量构建示例:
+#   make release PACKAGE=host  # 先构建 host
+#   make release PACKAGE=node  # 再构建 node (追加到同一目录)
+release:
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║  🚀 RiVision Release Build                                    ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@echo "  Version:  $(VERSION)"
+	@echo "  Platform: riscv64 (RISC-V K3)"
+	@echo "  Package:  $(PACKAGE)"
+	@echo "  Profile:  $(NODE_PROFILE)"
+	@echo "  Go:       $$(go version 2>/dev/null | grep -oP 'go[0-9]+\.[0-9]+(\.[0-9]+)?' || echo 'N/A')"
+	@echo "  Proxy:    $${GOPROXY}"
+	@echo ""
+	@$(MAKE) check-env --no-print-directory
+	@echo "[0/5] Cleaning previous build artifacts..."
+	@if [ "$(PACKAGE)" = "all" ] || [ "$(PACKAGE)" = "host" ]; then \
+		cd $(CURDIR)/../src/rivision_cli && rm -rf build/ 2>/dev/null || true; \
+		cd $(CURDIR)/../src/rivision_gateway/inference-gateway-go && rm -rf build/ 2>/dev/null || true; \
+		cd $(CURDIR)/../src/rivision_embed && rm -rf build/ 2>/dev/null || true; \
+		cd $(CURDIR)/../src/rivision_owl && rm -rf build/ 2>/dev/null || true; \
+	fi
+	@DIST_BASE=$(CURDIR)/../dist/$(VERSION)/riscv64 && \
+	mkdir -p $$DIST_BASE && \
+	if [ "$(PACKAGE)" = "all" ] || [ "$(PACKAGE)" = "host" ]; then \
+		HOST_DIR=$$DIST_BASE/host; \
+		mkdir -p $$HOST_DIR/bin $$HOST_DIR/lib $$HOST_DIR/models/embed $$HOST_DIR/services $$HOST_DIR/owl/bin $$HOST_DIR/owl/config $$HOST_DIR/config $$HOST_DIR/mp4path; \
+		echo "=== Packaging host ==="; \
+		echo "  Profile:  riscv64"; \
+		echo "  Platform: riscv64 (GOARCH=riscv64)"; \
+		echo "  Output:   $$HOST_DIR"; \
+		echo ""; \
+		echo "[1/5] Building rivision-cli (GOARCH=riscv64)..."; \
+		cd $(CURDIR)/../src/rivision_cli && make build-riscv64 VERSION=$(VERSION) --no-print-directory && \
+		cp build/rivision-cli-linux-riscv64 $$HOST_DIR/bin/rivision-cli && \
+		file $$HOST_DIR/bin/rivision-cli | grep -q "RISC-V" || (echo "ERROR: rivision-cli is not RISC-V binary!"; exit 1); \
+		echo "      ✅ 打包完成: rivision-cli"; \
+		echo "[2/5] Building rivision_gateway (GOARCH=riscv64)..."; \
+		cd $(CURDIR)/../src/rivision_gateway/inference-gateway-go && make build-riscv64 VERSION=$(VERSION) --no-print-directory && \
+		cp build/rivision_gateway $$HOST_DIR/bin/ && \
+		file $$HOST_DIR/bin/rivision_gateway | grep -q "RISC-V" || (echo "ERROR: rivision_gateway is not RISC-V binary!"; exit 1); \
+		echo "      ✅ 打包完成: rivision_gateway"; \
+		echo "[3/5] Building rivision-embed-server (GOARCH=riscv64)..."; \
+		cd $(CURDIR)/../src/rivision_embed && make build-riscv64 VERSION=$(VERSION) --no-print-directory && \
+		cp build/rivision-embed-server-linux-riscv64 $$HOST_DIR/bin/rivision-embed-server && \
+		file $$HOST_DIR/bin/rivision-embed-server | grep -q "RISC-V" || (echo "ERROR: rivision-embed-server is not RISC-V binary!"; exit 1); \
+		echo "      ✅ 打包完成: rivision-embed-server"; \
+		echo "[4/5] Building rivision-owl (GOARCH=riscv64)..."; \
+		cd $(CURDIR)/../src/rivision_owl && make owl-quiet DIST_DIR=$$HOST_DIR/owl --no-print-directory; \
+		file $$HOST_DIR/owl/bin/owl | grep -q "RISC-V" || (echo "ERROR: owl is not RISC-V binary!"; exit 1); \
+		cd $(CURDIR); \
+		cp $(CURDIR)/../src/rivision_embed/models/embed/*.onnx $$HOST_DIR/models/embed/ 2>/dev/null || true; \
+		cp $(CURDIR)/../src/rivision_embed/third_party/spacemit-ort-current/lib/libonnxruntime*.so* $$HOST_DIR/lib/ 2>/dev/null || true; \
+		cp $(CURDIR)/../src/rivision_embed/third_party/spacemit-ort-current/lib/libspacemit_ep*.so* $$HOST_DIR/lib/ 2>/dev/null || true; \
+		cp templates/rivision-gateway.service templates/rivision-cli.service templates/rivision-embed.service templates/rivision-owl.service $$HOST_DIR/services/ 2>/dev/null || true; \
+		cp templates/.env.template $$HOST_DIR/config/ 2>/dev/null || true; \
+		cp $(CURDIR)/../src/rivision_cli/mp4path/*.mp4 $$HOST_DIR/mp4path/ 2>/dev/null || true; \
+		cp $(CURDIR)/../src/rivision_cli/internal/embed/binaries/go2rtc-linux-riscv64 $$HOST_DIR/bin/ 2>/dev/null || true; \
+		cp $(CURDIR)/../src/rivision_cli/internal/embed/binaries/rtsp_server-linux-riscv64 $$HOST_DIR/bin/ 2>/dev/null || true; \
+		echo "      ✅ 打包完成: rivision-owl"; \
+		echo "[5/5] Finalizing host package..."; \
+		./scripts/generate_manifest.sh $$HOST_DIR $(VERSION) riscv64 $(GIT_COMMIT); \
+		./scripts/checksum.sh $$HOST_DIR; \
+		cp templates/install-host.sh $$HOST_DIR/install.sh; \
+		cp templates/uninstall.sh $$HOST_DIR/; \
+		chmod +x $$HOST_DIR/install.sh $$HOST_DIR/uninstall.sh; \
+		echo "      ✅ 打包完成: host"; \
+	fi && \
+	_build_yolo_if_needed() { \
+		if [ "$(PACKAGE)" = "all" ] || [ "$(PACKAGE)" = "node" ] || [ "$(PACKAGE)" = "node_yolo" ] || [ "$(PACKAGE)" = "node_all" ]; then \
+			echo "[+] Building yolo-server (riscv64)..."; \
+			cd $(CURDIR)/../src/rivision_node && make build-yolo-riscv64 --no-print-directory 2>&1 | tail -5; \
+			cd $(CURDIR); \
+		fi; \
+	}; \
+	_build_yolo_if_needed && \
+	_package_node() { \
+		local profile=$$1 outdir=$$2 desc=$$3 env_type=$$4; \
+		mkdir -p $$outdir/config; \
+		echo "[+] Packaging $$desc ($$profile)..."; \
+		cd $(CURDIR)/../src/rivision_node && make package PROFILE=$$profile DIST_DIR=$$outdir --no-print-directory 2>&1 | grep -v "^make\|Entering\|Leaving" || true; \
+		cd $(CURDIR); \
+		if [ -f "templates/.env.$$env_type.template" ]; then \
+			cp "templates/.env.$$env_type.template" $$outdir/config/.env.node.template; \
+		else \
+			cp templates/.env.node.template $$outdir/config/ 2>/dev/null || true; \
+		fi; \
+		./scripts/generate_manifest.sh $$outdir $(VERSION) riscv64 $(GIT_COMMIT); \
+		./scripts/checksum.sh $$outdir; \
+		cp templates/install-node.sh $$outdir/install.sh; \
+		cp templates/uninstall.sh $$outdir/; \
+		chmod +x $$outdir/install.sh $$outdir/uninstall.sh; \
+		echo "      ✅ 打包完成: $$desc"; \
+	}; \
+	if [ "$(PACKAGE)" = "all" ] || [ "$(PACKAGE)" = "node" ]; then \
+		_package_node "$(NODE_PROFILE)" "$$DIST_BASE/node" "node (完整)" "node"; \
+	fi && \
+	if [ "$(PACKAGE)" = "node_llama" ]; then \
+		_package_node "riscv_b_llama" "$$DIST_BASE/node_llama" "node_llama (仅VLM)" "node_llama"; \
+	fi && \
+	if [ "$(PACKAGE)" = "node_yolo" ]; then \
+		_package_node "riscv_b_yolo" "$$DIST_BASE/node_yolo" "node_yolo (仅YOLO)" "node_yolo"; \
+	fi && \
+	if [ "$(PACKAGE)" = "node_all" ]; then \
+		_package_node "$(NODE_PROFILE)" "$$DIST_BASE/node" "node (完整)" "node"; \
+		_package_node "riscv_b_llama" "$$DIST_BASE/node_llama" "node_llama (仅VLM)" "node_llama"; \
+		_package_node "riscv_b_yolo" "$$DIST_BASE/node_yolo" "node_yolo (仅YOLO)" "node_yolo"; \
+	fi && \
+	echo "README: host/, node/, node_llama/, node_yolo/ 为独立可分发包" > $$DIST_BASE/README.md && \
+	ln -sfn $(VERSION) $(CURDIR)/../dist/latest 2>/dev/null || true; \
+	echo "" && \
+	echo "╔══════════════════════════════════════════════════════════════╗" && \
+	echo "║  ✅ Release Complete                                         ║" && \
+	echo "╚══════════════════════════════════════════════════════════════╝" && \
+	echo "" && \
+	echo "  Output Packages:" && \
+	echo "  ┌─────────────────────────────────────────────────────────────┐" && \
+	([ -d "$$DIST_BASE/host" ] && printf "  │  %-12s %-6s cli, gateway, embed, owl              │\n" "host/" "$$(du -sh $$DIST_BASE/host | cut -f1)" || true) && \
+	([ -d "$$DIST_BASE/node" ] && printf "  │  %-12s %-6s node (yolo + llama)                   │\n" "node/" "$$(du -sh $$DIST_BASE/node | cut -f1)" || true) && \
+	([ -d "$$DIST_BASE/node_llama" ] && printf "  │  %-12s %-6s node (仅 llama/VLM)                  │\n" "node_llama/" "$$(du -sh $$DIST_BASE/node_llama | cut -f1)" || true) && \
+	([ -d "$$DIST_BASE/node_yolo" ] && printf "  │  %-12s %-6s node (仅 yolo/检测)                  │\n" "node_yolo/" "$$(du -sh $$DIST_BASE/node_yolo | cut -f1)" || true) && \
+	echo "  └─────────────────────────────────────────────────────────────┘" && \
+	echo "" && \
+	echo "  Deploy Commands:" && \
+	([ -d "$$DIST_BASE/host" ] && echo "    scp -r host/ target:/tmp/ && cd /tmp/host && ./install.sh" || true) && \
+	([ -d "$$DIST_BASE/node" ] && echo "    scp -r node/ target:/tmp/ && cd /tmp/node && ./install.sh" || true) && \
+	([ -d "$$DIST_BASE/node_llama" ] && echo "    scp -r node_llama/ target:/tmp/ && cd /tmp/node_llama && ./install.sh" || true) && \
+	([ -d "$$DIST_BASE/node_yolo" ] && echo "    scp -r node_yolo/ target:/tmp/ && cd /tmp/node_yolo && ./install.sh" || true) && \
+	echo ""
+
+# ============================================================
+# 单组件构建: CLI
+# ============================================================
+
+cli-web:
+	@cd $(SRC_DIR)/rivision_cli && make web --no-print-directory
+
+cli-web-build:
+	cd $(SRC_DIR)/rivision_cli && make web-build
+
+cli:
+	@DIST_DIR=$(CURDIR)/dist/rivision_cli; \
+	mkdir -p $$DIST_DIR/bin $$DIST_DIR/config $$DIST_DIR/services; \
+	cd $(SRC_DIR)/rivision_cli && make cli-riscv64 DIST_DIR=$$DIST_DIR; \
+	cp $(CURDIR)/templates/rivision-cli.service $$DIST_DIR/services/ 2>/dev/null || true; \
+	cp $(CURDIR)/templates/component-install.sh $$DIST_DIR/install.sh 2>/dev/null || true; \
+	chmod +x $$DIST_DIR/install.sh 2>/dev/null || true
+
+# ============================================================
+# 单组件构建: Embed
+# ============================================================
+
+embed:
+	@DIST_DIR=$(CURDIR)/dist/rivision_embed; \
+	mkdir -p $$DIST_DIR/bin $$DIST_DIR/config $$DIST_DIR/services $$DIST_DIR/models $$DIST_DIR/lib; \
+	cd $(SRC_DIR)/rivision_embed && make embed-riscv64 VERSION=$(VERSION) DIST_DIR=$$DIST_DIR; \
+	cp $(SRC_DIR)/rivision_embed/models/embed/*.onnx $$DIST_DIR/models/ 2>/dev/null || true; \
+	cp $(SRC_DIR)/rivision_embed/third_party/spacemit-ort-current/lib/libonnxruntime*.so* $$DIST_DIR/lib/ 2>/dev/null || true; \
+	cp $(SRC_DIR)/rivision_embed/third_party/spacemit-ort-current/lib/libspacemit_ep*.so* $$DIST_DIR/lib/ 2>/dev/null || true; \
+	cp $(CURDIR)/templates/rivision-embed.service $$DIST_DIR/services/ 2>/dev/null || true; \
+	cp $(CURDIR)/templates/component-install.sh $$DIST_DIR/install.sh 2>/dev/null || true; \
+	chmod +x $$DIST_DIR/install.sh 2>/dev/null || true
+
+# ============================================================
+# 单组件构建: Gateway
+# ============================================================
+
+gateway:
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║  📦 Building rivision_gateway                                 ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@echo "  Profile:  riscv64"
+	@echo "  Platform: riscv64 (GOARCH=riscv64)"
+	@echo "  Output:   $(CURDIR)/dist/rivision_gateway"
+	@echo ""
+	@DIST_DIR=$(CURDIR)/dist/rivision_gateway; \
+	mkdir -p $$DIST_DIR/bin $$DIST_DIR/config $$DIST_DIR/services; \
+	echo "[1/3] Building Go binary..."; \
+	cd $(SRC_DIR)/rivision_gateway/inference-gateway-go && make build-riscv64 VERSION=$(VERSION) --no-print-directory; \
+	echo "[2/3] Copying files..."; \
+	cp build/rivision_gateway $$DIST_DIR/bin/; \
+	cp $(CURDIR)/templates/.env.gateway.template $$DIST_DIR/config/.env 2>/dev/null || true; \
+	cp $(CURDIR)/templates/rivision-gateway.service $$DIST_DIR/services/ 2>/dev/null || true; \
+	echo "[3/3] Generating install script..."; \
+	cp $(CURDIR)/templates/component-install.sh $$DIST_DIR/install.sh 2>/dev/null || true; \
+	chmod +x $$DIST_DIR/install.sh 2>/dev/null || true; \
+	echo ""; \
+	echo "╔══════════════════════════════════════════════════════════════╗"; \
+	echo "║  ✅ Package Complete                                         ║"; \
+	echo "╚══════════════════════════════════════════════════════════════╝"; \
+	echo "  Output: $$DIST_DIR"; \
+	echo "  Size:   $$(du -sh $$DIST_DIR | cut -f1)"; \
+	echo ""
+
+# ============================================================
+# 单组件构建: Node
+# ============================================================
+
+node:
+	cd $(SRC_DIR)/rivision_node && make package PROFILE=$(NODE_PROFILE) DIST_DIR=$(CURDIR)/dist/rivision_node
+
+node-llama:
+	@echo "=== Packaging node (llama only) ==="
+	cd $(SRC_DIR)/rivision_node && make package PROFILE=riscv_b_llama DIST_DIR=$(CURDIR)/dist/rivision_node_llama
+
+node-yolo:
+	@echo "=== Packaging node (yolo only) ==="
+	cd $(SRC_DIR)/rivision_node && make package PROFILE=riscv_b_yolo DIST_DIR=$(CURDIR)/dist/rivision_node_yolo
+
+# ============================================================
+# yolo-server 编译 (不含打包)
+# ============================================================
+
+yolo-server:
+	@echo "=== Building yolo-server for RISC-V 64 ==="
+	cd $(SRC_DIR)/rivision_node/yolo-server && ./scripts/build-riscv64.sh
+	@echo "✅ Output: src/rivision_node/yolo-server/bin/yolo-server.riscv64"
+
+# ============================================================
+# 单组件构建: OWL
+# ============================================================
+
+owl:
+	cd $(SRC_DIR)/rivision_owl && make owl DIST_DIR=$(CURDIR)/dist/rivision_owl
+	cp $(CURDIR)/templates/component-install.sh $(CURDIR)/dist/rivision_owl/install.sh
+	chmod +x $(CURDIR)/dist/rivision_owl/install.sh
+
+owl-sim:
+	cd $(SRC_DIR)/rivision_owl && make owl-sim DIST_DIR=$(CURDIR)/dist/rivision_owl
+
+owl-gb28181-sim:
+	cd $(SRC_DIR)/rivision_owl && make owl-gb28181-sim DIST_DIR=$(CURDIR)/dist/rivision_owl
+
+owl-onvif-sim:
+	cd $(SRC_DIR)/rivision_owl && make owl-onvif-sim DIST_DIR=$(CURDIR)/dist/rivision_owl
+
+owl-web:
+	cd $(SRC_DIR)/rivision_owl && make owl-web
+
+check-zlm:
+	cd $(SRC_DIR)/rivision_owl && make $@
+
+# ZLMediaKit 源码编译 (从 src/rivision_owl/ZLMediaKit/ 编译)
+zlm:
+	cd $(SRC_DIR)/rivision_owl && make zlm
+
+# ============================================================
+# 工具目标
+# ============================================================
+
+clean:
+	@echo "Cleaning all build artifacts..."
+	@echo "  [1/6] rivision_cli..."
+	@cd $(SRC_DIR)/rivision_cli && make clean 2>/dev/null || true
+	@echo "  [2/6] rivision_embed..."
+	@cd $(SRC_DIR)/rivision_embed && make clean 2>/dev/null || true
+	@echo "  [3/6] rivision_gateway..."
+	@cd $(SRC_DIR)/rivision_gateway/inference-gateway-go && make clean 2>/dev/null || true
+	@echo "  [4/6] rivision_node..."
+	@cd $(SRC_DIR)/rivision_node && make clean 2>/dev/null || true
+	@echo "  [5/6] rivision_owl..."
+	@cd $(SRC_DIR)/rivision_owl && make clean 2>/dev/null || true
+	@echo "  [6/6] dist/..."
+	@rm -rf dist/*
+	@echo "  ✅ 清理完成"
+
+help:
+	@echo "============================================================"
+	@echo "RiVision Deploy - K3 RISC-V 构建系统"
+	@echo "============================================================"
+	@echo ""
+	@echo "用法: make [目标] [PACKAGE=all] [VERSION=vX.Y.Z] [NODE_PROFILE=riscv_b]"
+	@echo ""
+	@echo "发布构建 (支持 PACKAGE 参数: all|host|node):"
+	@echo "  release (默认)                     - K3 RISC-V 完整发布包"
+	@echo ""
+	@echo "  PACKAGE 选项:"
+	@echo "    all        (默认) - 完整包 (host + node)"
+	@echo "    host              - 主机端 (cli, gateway, embed, owl)"
+	@echo "    node              - 完整 node (yolo + llama)"
+	@echo "    node_llama        - 仅 llama 的 node (VLM 图像描述)"
+	@echo "    node_yolo         - 仅 yolo 的 node (目标检测)"
+	@echo "    node_all          - 同时打包 3 种 node 变体"
+	@echo ""
+	@echo "单组件构建 (输出到 dist/rivision_xxx/, 含 install.sh):"
+	@echo "  cli                                - rivision_cli"
+	@echo "  embed                              - rivision_embed"
+	@echo "  gateway                            - rivision_gateway"
+	@echo "  owl                                - rivision_owl (含 ZLMediaKit)"
+	@echo "  node                               - rivision_node (完整: yolo+llama)"
+	@echo "  node-llama                         - rivision_node (仅 llama)"
+	@echo "  node-yolo                          - rivision_node (仅 yolo)"
+	@echo ""
+	@echo "CLI 相关:"
+	@echo "  cli-web                            - 增量构建 Web 前端"
+	@echo "  cli-web-build                      - 强制构建 Web 前端"
+	@echo ""
+	@echo "OWL 相关:"
+	@echo "  owl-sim                            - 所有模拟器 (gb28181 + onvif)"
+	@echo "  owl-gb28181-sim                    - GB28181 模拟器"
+	@echo "  owl-onvif-sim                      - ONVIF 模拟器"
+	@echo "  check-zlm                          - 检查 ZLMediaKit 状态"
+	@echo ""
+	@echo "ZLMediaKit / yolo-server 编译:"
+	@echo "  zlm                                - ZLMediaKit RISC-V 编译"
+	@echo "  yolo-server                        - yolo-server RISC-V 编译"
+	@echo ""
+	@echo "工具:"
+	@echo "  clean                              - 清理所有构建产物"
+	@echo "  check-env                          - 检查构建/运行环境"
+	@echo "  help                               - 显示此帮助"
+	@echo ""
+	@echo "变量:"
+	@echo "  PACKAGE        - 打包内容 (all|host|node|node_llama|node_yolo|node_all)"
+	@echo "  VERSION        - 版本号 (默认: git tag)"
+	@echo "  NODE_PROFILE   - 节点配置 (riscv_b|riscv_b_llama|riscv_b_yolo)"
+	@echo ""
+	@echo "示例:"
+	@echo "  make                                         # 完整 K3 发布 (host + node)"
+	@echo "  make release PACKAGE=host                    # 只打包主机端"
+	@echo "  make release PACKAGE=node                    # 完整 node (yolo+llama)"
+	@echo "  make release PACKAGE=node_llama              # 仅 VLM 节点"
+	@echo "  make release PACKAGE=node_yolo               # 仅 YOLO 节点"
+	@echo "  make release PACKAGE=node_all                # 3种节点全打包"
+	@echo "  make yolo-server node               # 编译 yolo + 打包 node"
+	@echo ""

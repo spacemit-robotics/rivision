@@ -1,0 +1,39 @@
+[Unit]
+Description=RiVision Llama.cpp Inference Service (K3 Node)
+Documentation=https://github.com/ggerganov/llama.cpp
+# ★ 修复：等待网络完全就绪
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_node
+
+# ============================================================
+# 环境变量 (通过 .env 文件配置)
+# ============================================================
+EnvironmentFile=-/opt/rivision/rivision_node/config/.env
+
+# ============================================================
+# 启动命令
+# 由 switch-model.sh 生成的启动配置文件控制
+# ============================================================
+ExecStart=/opt/rivision/rivision_node/scripts/start-llama.sh
+
+# 重启策略
+Restart=always
+RestartSec=10
+
+# 安全设置 (注意: 不启用 ProtectHome/ProtectSystem，避免阻止动态库加载)
+# NoNewPrivileges=true
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-llama
+
+[Install]
+WantedBy=multi-user.target

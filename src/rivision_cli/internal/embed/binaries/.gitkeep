@@ -1,0 +1,20 @@
+# go2rtc 二进制文件目录
+# 
+# 构建前需要将各平台的 go2rtc 二进制放到此目录:
+#
+# Linux:
+#   go2rtc-linux-amd64
+#   go2rtc-linux-arm64
+#   go2rtc-linux-riscv64
+#
+# Windows:
+#   go2rtc-windows-amd64.exe
+#
+# macOS:
+#   go2rtc-darwin-amd64
+#   go2rtc-darwin-arm64
+#
+# 获取方式:
+# 1. 从 https://github.com/AlexxIT/go2rtc/releases 下载
+# 2. 或从已编译的版本复制:
+#    - RISC-V: rivision-k3-deploy/rel/rivision_server/thirdparty/go2rtc/go2rtc
