@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 // spacemit_cgo.h - C wrapper for SpaceMIT EP initialization
 // Only used on RISC-V K3 platform with A100 NPU
 

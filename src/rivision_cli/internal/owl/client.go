@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package owl provides a client for OWL (GoWVP) GB28181 platform.
 package owl
 

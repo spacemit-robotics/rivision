@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // Package handlers 提供系统 API 处理器
 package handlers
 

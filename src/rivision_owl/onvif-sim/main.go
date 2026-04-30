@@ -1,3 +1,7 @@
+// Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // ONVIF Simulator - 虚拟 ONVIF 摄像头模拟器
 //
 // 用于测试 OWL 等 ONVIF 客户端，无需真实摄像头硬件。
