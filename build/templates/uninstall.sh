@@ -165,7 +165,7 @@ uninstall_host() {
 
     # 删除 mp4path (除非 --keep-data)
     if ! $KEEP_DATA && [ -d "$INSTALL_DIR/mp4path" ]; then
-        rm -rf "$INSTALL_DIR/mp4path"
+        rm -rf "${INSTALL_DIR:?}/mp4path"
         echo "  已删除: mp4path/"
     fi
 }
@@ -189,31 +189,31 @@ uninstall_node() {
 
     # 删除运行时库
     if [ -d "$INSTALL_DIR/lib" ]; then
-        rm -rf "$INSTALL_DIR/lib"
+        rm -rf "${INSTALL_DIR:?}/lib"
         echo "  已删除: lib/"
     fi
 
     # 删除 llama.cpp 引擎
     if [ -d "$INSTALL_DIR/engines" ]; then
-        rm -rf "$INSTALL_DIR/engines"
+        rm -rf "${INSTALL_DIR:?}/engines"
         echo "  已删除: engines/"
     fi
 
     # 删除脚本
     if [ -d "$INSTALL_DIR/scripts" ]; then
-        rm -rf "$INSTALL_DIR/scripts"
+        rm -rf "${INSTALL_DIR:?}/scripts"
         echo "  已删除: scripts/"
     fi
 
     # 删除 services 目录
     if [ -d "$INSTALL_DIR/services" ]; then
-        rm -rf "$INSTALL_DIR/services"
+        rm -rf "${INSTALL_DIR:?}/services"
         echo "  已删除: services/"
     fi
 
     # 删除模型 (除非 --keep-data)
     if ! $KEEP_DATA && [ -d "$INSTALL_DIR/models" ]; then
-        rm -rf "$INSTALL_DIR/models"
+        rm -rf "${INSTALL_DIR:?}/models"
         echo "  已删除: models/"
     elif $KEEP_DATA && [ -d "$INSTALL_DIR/models" ]; then
         echo -e "  ${YELLOW}保留: models/${NC}"
@@ -221,7 +221,7 @@ uninstall_node() {
 
     # 删除配置 (除非 --keep-data)
     if ! $KEEP_DATA && [ -d "$INSTALL_DIR/config" ]; then
-        rm -rf "$INSTALL_DIR/config"
+        rm -rf "${INSTALL_DIR:?}/config"
         echo "  已删除: config/"
     elif $KEEP_DATA && [ -d "$INSTALL_DIR/config" ]; then
         echo -e "  ${YELLOW}保留: config/${NC}"
@@ -263,7 +263,7 @@ fi
 if ! $KEEP_DATA; then
     for comp_dir in rivision_cli rivision_gateway rivision_embed rivision_owl rivision_node; do
         if [ -d "$INSTALL_DIR/$comp_dir/logs" ]; then
-            rm -rf "$INSTALL_DIR/$comp_dir/logs"
+            rm -rf "${INSTALL_DIR:?}/$comp_dir/logs"
             echo "  已删除: $comp_dir/logs/"
         fi
     done
@@ -285,7 +285,7 @@ if [ -d "$INSTALL_DIR" ]; then
     # 检查是否还有文件残留
     REMAINING=$(find "$INSTALL_DIR" -type f 2>/dev/null | wc -l)
     if [ "$REMAINING" -eq 0 ]; then
-        rm -rf "$INSTALL_DIR"
+        rm -rf "${INSTALL_DIR:?}"
         echo "  已删除: $INSTALL_DIR/"
     else
         echo -e "  ${YELLOW}$INSTALL_DIR/ 保留 ($REMAINING 个文件残留)${NC}"
