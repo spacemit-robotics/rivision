@@ -1,0 +1,27 @@
+# RiVision YOLO Server 配置
+# 位置: config/yolo.yaml
+#
+# 注意: 当前 yolo-server 通过命令行参数配置（由 start-yolo.sh 传递）
+# 此文件作为配置参考文档，实际生效的配置在 .env 和 start-yolo.sh 中
+
+server:
+  host: "0.0.0.0"
+  port: 9081
+
+model:
+  # 模型按平台自动选择（start-yolo.sh 逻辑）:
+  #   RISC-V (K3): 910byolo11n_b2.q.onnx  (SpacemiT NPU 加速，推荐)
+  #   x86:         yolov8n.onnx
+  # 手动指定: 通过 switch-yolo-model.sh 或 .env 中 YOLO_MODEL 变量
+  input_width: 640
+  input_height: 640
+
+inference:
+  # ORT 推理线程: 1 (主线程) + SpacemiT EP 内部 6 线程
+  ort_intra_threads: 1
+  spacemit_ep_threads: 6
+  confidence_threshold: 0.25
+  nms_threshold: 0.45
+
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR

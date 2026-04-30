@@ -1,0 +1,62 @@
+# ============================================================
+# gb28181-sim 多通道配置文件示例
+# ============================================================
+# 使用方法: ./gb28181-sim -c config.yaml
+#
+# server   -> 对应 owl config.toml 中的 [Sip] 配置
+# agent    -> 模拟设备的 ID（20位国标码）
+# channels -> 每路摄像头，id 为通道ID，source 为视频源
+# ============================================================
+
+server:
+  ip: "127.0.0.1"      # OWL SIP 监听地址（与 owl config.toml 一致）
+  port: 15060          # OWL SIP 端口（config.toml 中 Port=15060）
+  id: "34020000002000000001"  # 平台 ID（20位，与 owl 一致）
+
+agent:
+  id: "34020000001320000001"   # 模拟设备 ID（国标 20 位，不能与 server.id 相同）
+  password: "12345678"         # 设备密码（与 owl config.toml 中 Password 一致）
+
+# 全局可选参数（可省略）
+global:
+  domain: "3402000000"    # SIP 域（默认取 server.id 前 10 位）
+  # local_ip: ""          # 本地 IP（留空则自动检测）
+  # use_tcp: false        # 是否使用 TCP 信令（默认 UDP）
+  # verbose: false        # 是否打印详细日志
+# 环境变量（非 YAML）：
+#   GB28181_SIM_MP4_COPY=1  MP4/MKV 等用 -c:v copy 推 RTP（省 CPU；源含 B 帧时可能画面抖动）
+
+# ============================================================
+# 通道列表：每路 = 独立视频文件
+# source 类型：
+#   test                 - 内置动态测试图案（彩色条纹+通道号），无需外部文件
+#   file:///path/to/xxx  - 本地视频文件（H.264/H.265/MP4，自动循环）
+#   rtsp://...           - 实时 RTSP 流
+# ============================================================
+# 视频文件路径：
+#   部署后: /opt/rivision-owl/mp4path/
+#   开发时: 可修改为本地路径
+channels:
+  - id: "34020000001310000001"
+    name: "大门"
+    source: "file:///opt/rivision-owl/mp4path/cam1.mp4"
+
+  - id: "34020000001310000002"
+    name: "停车场A区"
+    source: "file:///opt/rivision-owl/mp4path/cam2.mp4"
+
+  - id: "34020000001310000003"
+    name: "停车场B区"
+    source: "file:///opt/rivision-owl/mp4path/cam3.mp4"
+
+  - id: "34020000001310000004"
+    name: "楼梯口"
+    source: "file:///opt/rivision-owl/mp4path/cam4.mp4"
+
+  - id: "34020000001310000005"
+    name: "围墙周界"
+    source: "file:///opt/rivision-owl/mp4path/cam5.mp4"
+
+  - id: "34020000001310000006"
+    name: "电梯"
+    source: "file:///opt/rivision-owl/mp4path/cam6.mp4"

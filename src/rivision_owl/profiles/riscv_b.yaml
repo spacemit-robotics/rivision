@@ -1,0 +1,23 @@
+# RiVision OWL - RISC-V (K3) 平台配置
+platform: riscv64
+goarch: riscv64
+
+owl:
+  binary: owl
+  build_cmd: "GOOS=linux GOARCH=riscv64 go build -trimpath -ldflags='-s -w' -o build/owl-riscv64 ."
+  output: build/owl-riscv64
+
+zlmediakit:
+  type: prebuilt
+  path: ZLMediaKit/build-riscv64/release/linux/Release/MediaServer
+
+gb28181_sim:
+  binary: gb28181-sim
+  build_cmd: "GOOS=linux GOARCH=riscv64 go build -trimpath -ldflags='-s -w' -o build/gb28181-sim-riscv64 ."
+  output: build/gb28181-sim-riscv64
+
+install:
+  base_dir: /opt/rivision-owl
+  services:
+    - rivision-owl.service
+    - rivision-zlm.service

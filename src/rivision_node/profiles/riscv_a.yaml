@@ -1,0 +1,24 @@
+# Profile: riscv_a
+# RISC-V K3 CPU 模式部署配置
+# 使用 onnxruntime beta2 + llama.cpp 旧版（支持源码编译）
+
+name: riscv_a
+platform: riscv64
+goarch: riscv64
+
+# yolo-server 预编译二进制
+yolo_bin: yolo-server/bin/yolo-server.riscv64
+
+# onnxruntime 运行时库目录（仅复制 .so）
+ort_lib_dir: yolo-server/third_party/spacemit-ort.riscv64.2.0.2+beta2/lib
+ort_lib_glob: "*.so*"
+
+# llama.cpp 类型: source_repo（完整源码仓库，提取 build 产物）
+llama_type: source_repo
+llama_source: third_party/llama.cpp/riscv64-legacy
+llama_build_dir: build-k3
+
+# 模型 (Qwen3VL 为默认)
+model_default: models/shared/Qwen3VL
+model_optional: models/shared/miniCPM_v4.5 models/shared/fastvlm-0.5b-q8
+model_yolo: models/shared/910byolo11n_b2.q.onnx models/shared/yolov8n.onnx

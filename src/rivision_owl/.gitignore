@@ -1,0 +1,15 @@
+# 运行时生成的文件，不应提交
+data/
+logs/
+
+# 嵌入式 ZLM 二进制（每次构建重新提取）
+owl/internal/embed/binaries/ZLMediaKit-*
+
+# Go 构建产物
+build/
+dist/
+owl/owl
+gb28181-sim/gb28181-sim
+
+# ZLM 配置文件（运行时生成）
+dist/config/owl-zlm/

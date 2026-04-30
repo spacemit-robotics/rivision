@@ -1,0 +1,12 @@
+[submodule "src/rivision_owl/gb28181-web"]
+	path = src/rivision_owl/gb28181-web
+	url = https://github.com/gowvp/gb28181_web.git
+[submodule "src/rivision_owl/onvif-go"]
+	path = src/rivision_owl/onvif-go
+	url = https://github.com/0x524a/onvif-go.git
+[submodule "src/rivision_owl/owl"]
+	path = src/rivision_owl/owl
+	url = https://github.com/gowvp/owl.git
+[submodule "src/rivision_owl/ZLMediaKit"]
+	path = src/rivision_owl/ZLMediaKit
+	url = https://github.com/ZLMediaKit/ZLMediaKit.git

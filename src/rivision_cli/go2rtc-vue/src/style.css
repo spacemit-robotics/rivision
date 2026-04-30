@@ -1,0 +1,298 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Element Plus 风格配色 */
+  --bg-color: #ffffff;
+  --bg-page: #f5f7fa;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f8;
+  --bg-tertiary: #eaeaec;
+  --bg-dark: #212121;
+  --bg-sidebar: #f7f7f8;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-selected: #ecf5ff;
+  
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #c0c4cc;
+  --text-light: #ffffff;
+  --text-muted: #8e8ea0;
+  
+  --border-color: #dcdfe6;
+  --border-light: #e4e7ed;
+  --border-lighter: #ebeef5;
+  --border-dark: #4a4a4f;
+  
+  --primary-color: #409eff;
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --info-color: #909399;
+  
+  --accent-primary: #409eff;
+  --accent-hover: #66b1ff;
+  --accent-danger: #f56c6c;
+  --accent-danger-hover: #f78989;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* 圆角 */
+  --border-radius-small: 4px;
+  --border-radius-base: 6px;
+  --border-radius-large: 8px;
+  
+  /* 阴影 */
+  --box-shadow-base: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+  
+  /* 字体 */
+  --font-size-small: 12px;
+  --font-size-base: 14px;
+  --font-size-large: 16px;
+  
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* 页面加载动画 */
+.page-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--bg-secondary);
+  border-top: 3px solid var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 脉冲动画 */
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* 淡入动画 */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 滑入动画 */
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 旋转动画 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+}
+
+/* ChatGPT风格按钮 */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent-primary);
+  color: var(--text-light);
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent-danger);
+  color: var(--text-light);
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-danger:hover {
+  background: var(--accent-danger-hover);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 暗色主题 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #212121;
+    --bg-secondary: #2f2f2f;
+    --bg-tertiary: #3a3a3a;
+    --bg-sidebar: #171717;
+    --bg-hover: rgba(255, 255, 255, 0.1);
+    --bg-selected: #1a3a5a;
+    
+    --text-primary: #ececf1;
+    --text-secondary: #c5c5d2;
+    --text-muted: #8e8ea0;
+    
+    --border-color: #4a4a4f;
+    --border-light: #4a4a4f;
+    --border-dark: #4a4a4f;
+    
+    --primary-color: #10a37f;
+  }
+  
+  .btn-secondary {
+    border-color: var(--border-dark);
+    color: var(--text-primary);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--bg-hover);
+  }
+  
+  .btn-icon {
+    color: var(--text-secondary);
+  }
+  
+  .btn-icon:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
