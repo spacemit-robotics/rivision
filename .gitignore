@@ -1,0 +1,75 @@
+# === 构建产物（make 自动生成）===
+dist/
+# 排除子项目的 build/ 产物，但保留顶层 build/（构建系统）
+src/**/build/
+**/build-*/
+**/cmake-build-*/
+
+# === 编译二进制（go build / cmake 生成）===
+src/rivision_node/node-agent/node-agent-go
+src/rivision_node/node-agent/dist/
+src/rivision_node/yolo-server/bin/
+
+# === 模型文件（setup-deps.sh 下载）===
+*.onnx
+*.gguf
+src/rivision_node/models/
+src/rivision_cli/models/
+src/rivision_embed/models/
+
+# === 视频文件（rsync 管理）===
+*.mp4
+*.avi
+src/*/mp4path/
+
+# === 第三方预编译库（K3 系统自带，不入 git，不需要 rsync）===
+src/*/third_party/
+src/**/third_party/
+src/rivision_node/yolo-server/third_party/
+src/rivision_node/third_party/
+
+# === ZLMediaKit（K3 上从源码编译，submodule 管理）===
+# 注：以下 4 个子项目通过 git submodule 管理，不在 .gitignore 中排除
+# src/rivision_owl/gb28181-web/  → submodule: github.com/gowvp/gb28181_web
+# src/rivision_owl/onvif-go/     → submodule: github.com/0x524a/onvif-go
+# src/rivision_owl/owl/          → submodule: github.com/gowvp/owl
+# src/rivision_owl/ZLMediaKit/   → submodule: github.com/ZLMediaKit/ZLMediaKit
+
+# === go2rtc / rtsp_server 预编译二进制（K3 上从源码编译生成）===
+src/rivision_cli/internal/embed/binaries/go2rtc-*
+src/rivision_cli/internal/embed/binaries/rtsp_server-*
+src/rivision_cli/internal/embed/binaries/platform/
+!src/rivision_cli/internal/embed/binaries/.gitkeep
+
+# === 交叉工具链（不需要，K3 本地编译）===
+tools/
+
+# === 前端（npm install + npm run build 自动生成）===
+**/node_modules/
+# Vite 直接输出到 internal/webserver/frontend/dist/，不再有 go2rtc-vue/dist/
+src/rivision_cli/internal/webserver/frontend/dist/
+src/rivision_owl/gb28181-web/dist/
+
+# === 运行时数据 ===
+*.db
+*.db-wal
+*.db-shm
+**/data/
+**/logs/
+*.log
+
+# === IDE / OS / AI ===
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# === docs 独立仓库（gitlab 单独管理）===
+docs/
+
+# === 临时 ===
+tmp/
+.cache/

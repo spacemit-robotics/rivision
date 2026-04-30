@@ -1,0 +1,22 @@
+# Profile: riscv_b_yolo
+# RISC-V K3 NPU 模式 - 仅 YOLO 检测
+# 适用于: 只需要目标检测，不需要 VLM 的场景
+
+name: riscv_b_yolo
+platform: riscv64
+goarch: riscv64
+
+# yolo-server 预编译二进制
+yolo_bin: yolo-server/bin/yolo-server.riscv64
+
+# onnxruntime 运行时库目录
+ort_lib_dir: yolo-server/third_party/spacemit-ort-current/lib
+ort_lib_glob: "*.so*"
+
+# 跳过 llama.cpp
+llama_type: skip
+
+# 仅 YOLO 模型
+model_default:
+model_optional:
+model_yolo: models/shared/910byolo11n_b2.q.onnx models/shared/yolov8n.onnx

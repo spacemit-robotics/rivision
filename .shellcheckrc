@@ -1,0 +1,40 @@
+# ShellCheck configuration for RiVision project
+# https://www.shellcheck.net/wiki/
+
+# SC1090: Can't follow non-constant source (dynamic source paths)
+# SC1091: Not following (already excluded in CI)
+disable=SC1090,SC1091
+
+# SC2034: Variable appears unused (color vars exported via source)
+disable=SC2034
+
+# SC2154: Variable referenced but not assigned (from sourced .env files)
+disable=SC2154
+
+# SC2155: Declare and assign separately (common pattern, acceptable here)
+disable=SC2155
+
+# SC2015: A && B || C is not if-then-else (intentional pattern)
+disable=SC2015
+
+# SC2012: Use find instead of ls (acceptable for simple cases)
+# SC2011: Use find instead of ls (acceptable for simple cases)
+disable=SC2011,SC2012
+
+# SC2086: Double quote to prevent globbing (intentional word splitting in some cases)
+disable=SC2086
+
+# SC2046: Quote this to prevent word splitting (e.g., $(nproc))
+disable=SC2046
+
+# SC2016: Expressions don't expand in single quotes (intentional for bashrc export)
+disable=SC2016
+
+# SC2001: See if you can use ${variable//search/replace} (sed is clearer)
+disable=SC2001
+
+# SC2129: Consider using { cmd1; cmd2; } >> file (style preference)
+disable=SC2129
+
+# SC2162: read without -r will mangle backslashes (acceptable for simple prompts)
+disable=SC2162

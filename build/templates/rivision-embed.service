@@ -1,0 +1,49 @@
+[Unit]
+Description=RiVision Embedding Service (Chinese-CLIP ONNX)
+Documentation=https://github.com/OFA-Sys/Chinese-CLIP
+After=network.target
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_embed
+
+EnvironmentFile=-/opt/rivision/shared/.env
+EnvironmentFile=-/opt/rivision/rivision_embed/config/.env
+
+# ============================================================
+# Embedding 服务参数 (通过 .env 文件覆盖)
+# ============================================================
+# EMBED_HOST: 监听地址 (默认 127.0.0.1)
+# EMBED_PORT: 监听端口 (默认 18081)
+# EMBED_TEXT_MODEL: 文本模型路径
+# EMBED_VISION_MODEL: 视觉模型路径
+# EMBED_THREADS: 推理线程数 (K3 默认 8, x86 默认 4)
+# ============================================================
+
+ExecStart=/bin/bash -c '\
+    export LD_LIBRARY_PATH=/opt/rivision/rivision_embed/lib:$LD_LIBRARY_PATH && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "riscv64" ]; then DEFAULT_THREADS=8; else DEFAULT_THREADS=4; fi && \
+    /opt/rivision/rivision_embed/bin/rivision-embed-server \
+    --host ${EMBED_HOST:-127.0.0.1} \
+    --port ${EMBED_PORT:-18081} \
+    --text-model ${EMBED_TEXT_MODEL:-/opt/rivision/rivision_embed/models/cn_clip_text.onnx} \
+    --vision-model ${EMBED_VISION_MODEL:-/opt/rivision/rivision_embed/models/cn_clip_vision.onnx} \
+    --threads ${EMBED_THREADS:-$DEFAULT_THREADS}'
+
+Restart=always
+RestartSec=5
+
+# 资源限制 (可选，riscv64 建议启用)
+# MemoryMax=1G
+# CPUQuota=200%
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-embed
+
+[Install]
+WantedBy=multi-user.target

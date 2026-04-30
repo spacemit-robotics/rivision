@@ -1,0 +1,146 @@
+; ZLMediaKit 独立部署配置模板（外部模式）
+; 仅在使用 owl -no-zlm 外部模式时，由 systemd 服务调用
+; 嵌入式模式（默认）由 OWL 运行时动态生成临时配置，不使用此文件
+;
+; 部署时由 install.sh 或手动编辑，将 ${VAR} 替换为真实值
+; 变量来源见 config/.env.template
+;
+; 【重要】ZLM_SECRET 必须与 ZLM 二进制内置配置保持一致：
+;   - 预编译 x86_64 ZLM 内置: eMkolBseFWMPJ8LgmRX2AVveRVtyZ0eN
+
+[api]
+apiDebug=1
+secret=${ZLM_SECRET:-eMkolBseFWMPJ8LgmRX2AVveRVtyZ0eN}
+snapRoot=./snap/
+defaultSnap=./snap/default.jpg
+
+[ffmpeg]
+bin=${ZLM_FFMPEG_BIN:-/usr/bin/ffmpeg}
+snap=-i %s -y -f mjpeg -frames:v 1 %s
+log=./ffmpeg/log/
+restartSec=0
+
+[general]
+mediaServerId=${ZLM_SERVER_ID:-rivision-zlm}
+rtcExternIP=${OWL_SDP_IP:-127.0.0.1}
+enableVhost=0
+flowThreshold=1024
+maxStreamWaitMS=15000
+streamNoneReaderDelayMS=${ZLM_STREAM_NONE_READER_DELAY_MS:-20000}
+resetWhenRePlay=1
+; 合并写入，减少系统调用开销，提升吞吐
+mergeWriteMS=100
+modifyStamp=2
+enableAudio=1
+addMuteAudio=1
+waitTrackReady=1
+waitAddTrackMS=3000
+unreadyFrameCache=100
+publishToHls=1
+publishToMP4=0
+enableHls=1
+enableMP4=0
+enableRtsp=1
+enableRtmp=1
+enableTS=1
+enableFMP4=1
+checkNvidiaDev=1
+; demand 模式：按需拉流，减少资源占用
+rtmp_demand=0
+rtsp_demand=0
+
+[hls]
+; 增大文件缓冲区以提升性能
+fileBufSize=262144
+filePath=./www/hls/
+; 减少切片数量，降低延迟
+hlsNum=2
+hlsSavePath=./www/hls_save/
+segDelay=0
+; 缩短切片时长以降低延迟（从 2 秒改为 1 秒）
+segDur=1
+segKeep=0
+segNum=2
+segRetain=5
+broadcastRecordTs=0
+
+[hook]
+admin_params=secret=${ZLM_SECRET:-eMkolBseFWMPJ8LgmRX2AVveRVtyZ0eN}
+enable=1
+on_flow_report=
+on_http_access=
+on_play=
+on_publish=
+on_record_mp4=
+on_record_ts=
+on_rtsp_auth=
+on_rtsp_realm=
+on_shell_login=
+; ZLM 回调 OWL 的地址（OWL HTTP 端口由 OWL_WEBHOOK_IP 和 OWL_HTTP_PORT 决定）
+on_server_started=http://${OWL_WEBHOOK_IP:-127.0.0.1}:${OWL_HTTP_PORT:-15123}/api/v1/zlm/on_server_started
+on_stream_changed=http://${OWL_WEBHOOK_IP:-127.0.0.1}:${OWL_HTTP_PORT:-15123}/api/v1/zlm/on_stream_changed
+on_stream_none_reader=http://${OWL_WEBHOOK_IP:-127.0.0.1}:${OWL_HTTP_PORT:-15123}/api/v1/zlm/on_stream_none_reader
+on_stream_not_found=http://${OWL_WEBHOOK_IP:-127.0.0.1}:${OWL_HTTP_PORT:-15123}/api/v1/zlm/on_stream_not_found
+timeoutSec=10
+alive_interval=30.0
+
+[http]
+charSet=utf-8
+dirMenu=1
+keepAliveSecond=30
+maxReqSize=40960
+notFound=<html><head><title>404 Not Found</title></head><body bgcolor="white"><center><h1>404 Not Found</h1></center><hr><center>ZLMediaKit</center></body></html>
+port=${ZLM_HTTP_PORT:-8220}
+rootPath=./www
+sendBufSize=65536
+sslport=${ZLM_HTTPS_PORT:-8443}
+virtualPath=
+
+[multicast]
+addrMax=239.255.255.255
+addrMin=239.0.0.0
+udpTTL=64
+
+[record]
+appName=record
+fastStart=0
+fileBufSize=65536
+filePath=./record/
+fileRepeat=0
+fileSecond=3600
+sampleMS=500
+
+[rtmp]
+handshakeSecond=15
+keepAliveSecond=15
+port=${ZLM_RTMP_PORT:-1935}
+sslport=${ZLM_RTMPS_PORT:-19350}
+
+[rtp]
+; 增大 MTU 大小以支持更大的 RTP 包
+audioMtuSize=600
+videoMtuSize=1400
+
+[rtp_proxy]
+checkSource=1
+dumpDir=
+port_range=${ZLM_RTP_PORT_RANGE:-20000-20100}
+timeoutSec=15
+
+[rtsp]
+authBasic=0
+directProxy=1
+handshakeSecond=15
+keepAliveSecond=15
+port=${ZLM_RTSP_PORT:-5544}
+sslport=${ZLM_RTSPS_PORT:-5322}
+
+[shell]
+maxReqSize=1024
+port=0
+
+[srt]
+latencyMul=4
+pktBufSize=8192
+port=${ZLM_SRT_PORT:-9000}
+timeoutSec=5

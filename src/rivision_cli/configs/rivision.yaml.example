@@ -1,0 +1,96 @@
+# RiVision-CLI 配置文件示例
+# 复制此文件为 rivision.yaml 并根据需要修改
+
+# 节点信息
+node:
+  id: master-1
+  role: master  # master, yolo, compute
+  name: "RiVision 管理节点"
+
+# 服务配置
+server:
+  host: 0.0.0.0
+  port: 8280
+  debug: false
+
+# go2rtc 配置
+go2rtc:
+  enabled: true
+  port: 1984
+  config_path: ""  # 留空使用默认配置
+
+# 摄像头配置
+cameras:
+  - id: cam1
+    name: "入口摄像头"
+    source: rtsp://admin:123456@192.168.1.101/stream
+    enabled: true
+    yolo:
+      enabled: true
+      model: yolov8n
+      conf_thresh: 0.5
+      target_fps: 2
+    vlm:
+      enabled: true
+      trigger_mode: interval  # interval, yolo, manual
+      interval: 30s
+      min_objects: 1
+      prompt: "请描述图片中的场景和人员活动"
+
+  - id: cam2
+    name: "停车场摄像头"
+    source: rtsp://admin:123456@192.168.1.102/stream
+    enabled: true
+    yolo:
+      enabled: true
+      model: yolov8n
+      conf_thresh: 0.5
+      target_fps: 2
+    vlm:
+      enabled: true
+      trigger_mode: yolo
+      interval: 60s
+      min_objects: 2
+      prompt: "请描述停车场的车辆和人员情况"
+
+# YOLO 全局配置
+yolo:
+  enabled: true
+  model_dir: ./models
+  default_model: yolov8n.onnx
+  use_npu: false
+  conf_thresh: 0.5
+  nms_thresh: 0.45
+  max_detections: 100
+  tracker:
+    enabled: true
+    track_thresh: 0.5
+    match_thresh: 0.8
+    track_buffer: 30
+
+# VLM 配置
+vlm:
+  gateway_url: http://localhost:8081
+  timeout: 30s
+  retry: 2
+  default_prompt: "请描述图片中的场景"
+  max_concurrent: 4
+
+# 存储配置
+storage:
+  type: sqlite  # sqlite, file
+  path: ./data/rivision.db
+  vlm_results:
+    max_count: 10000
+    retention_days: 30
+  snapshots:
+    path: ./data/snapshots
+    retention_days: 7
+
+# 日志配置
+logging:
+  level: info  # debug, info, warn, error
+  file: ./logs/rivision.log
+  max_size: 100MB
+  max_backups: 7
+  compress: true

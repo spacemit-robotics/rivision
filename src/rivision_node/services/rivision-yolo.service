@@ -1,0 +1,47 @@
+[Unit]
+Description=RiVision YOLO Inference Service (K3 Node)
+Documentation=https://github.com/ultralytics/ultralytics
+# ★ 修复：等待网络完全就绪
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_node
+
+# ============================================================
+# 环境变量 (通过 .env 文件配置)
+# ============================================================
+EnvironmentFile=-/opt/rivision/rivision_node/config/.env
+
+# ============================================================
+# ★ YOLO 多线程配置（通过 .env 文件设置）
+# ============================================================
+# YOLO_WORKERS: 并发 Worker 数 (K3=2, x86=4-6)
+# YOLO_THREADS: 每 Worker 线程数 (K3=4, x86=4-8)
+# YOLO_INTER_THREADS: 算子间并行度 (默认=2)
+# ⚠️ 已移除硬编码 Environment=，现在完全由 .env 控制
+
+# ============================================================
+# 启动命令：使用 /bin/bash 显式调用启动脚本
+# ============================================================
+ExecStart=/bin/bash /opt/rivision/rivision_node/scripts/start-yolo.sh
+
+# 重启策略
+Restart=always
+RestartSec=5
+
+# 资源限制
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-yolo
+
+[Install]
+WantedBy=multi-user.target
