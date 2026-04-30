@@ -1,0 +1,100 @@
+SpacemiT RiVision Component
+Copyright 2026 SpacemiT (Hangzhou) Technology Co. Ltd.
+
+This product includes software developed at
+SpacemiT (Hangzhou) Technology Co. Ltd. (https://www.spacemit.com/).
+
+---------------------------------------------------------------------------
+Third-party Software Notices:
+---------------------------------------------------------------------------
+
+This product contains portions of the following third-party software:
+
+1. ZLMediaKit (https://github.com/ZLMediaKit/ZLMediaKit)
+   Copyright (c) 2016-2026 ZLMediaKit project
+   Licensed under the MIT License.
+
+2. llama.cpp (https://github.com/ggerganov/llama.cpp)
+   Copyright (c) 2023-2026 Georgi Gerganov
+   Licensed under the MIT License.
+
+3. ONNX Runtime (https://github.com/microsoft/onnxruntime)
+   Copyright (c) 2018-2026 Microsoft Corporation
+   Licensed under the MIT License.
+
+4. owl (https://github.com/gowvp/owl)
+   Copyright (c) 2024-2026 gowvp
+   Licensed under the GNU General Public License v3.0.
+
+5. gb28181-web (https://github.com/gowvp/gb28181_web)
+   Copyright (c) 2024-2026 gowvp
+   Licensed under the MIT License.
+
+6. onvif-go (https://github.com/0x524a/onvif-go)
+   Copyright (c) 2025-2026 ProtoTess
+   Licensed under the MIT License.
+
+7. go2rtc (https://github.com/AlexxIT/go2rtc)
+   Copyright (c) 2022-2026 AlexxIT
+   Licensed under the MIT License.
+
+8. Gin Web Framework (https://github.com/gin-gonic/gin)
+   Copyright (c) 2014-2026 Manuel Martinez-Almeida
+   Licensed under the MIT License.
+
+9. GORM (https://gorm.io)
+   Copyright (c) 2013-2026 Jinzhu
+   Licensed under the MIT License.
+
+10. gRPC-Go (https://google.golang.org/grpc)
+    Copyright (c) 2014-2026 gRPC authors
+    Licensed under the Apache License 2.0.
+
+11. Protocol Buffers (https://google.golang.org/protobuf)
+    Copyright (c) 2018-2026 The Go Authors
+    Licensed under the BSD 3-Clause License.
+
+12. Cobra (https://github.com/spf13/cobra)
+    Copyright (c) 2013-2026 Steve Francia
+    Licensed under the Apache License 2.0.
+
+13. Viper (https://github.com/spf13/viper)
+    Copyright (c) 2014-2026 Steve Francia
+    Licensed under the MIT License.
+
+14. ONNX Runtime Go (https://github.com/yalue/onnxruntime_go)
+    Copyright (c) 2021-2026 Nathan Otterness
+    Licensed under the MIT License.
+
+15. React (https://github.com/facebook/react)
+    Copyright (c) Meta Platforms, Inc. and affiliates
+    Licensed under the MIT License.
+
+16. Vue.js (https://github.com/vuejs/core)
+    Copyright (c) 2014-2026 Evan You
+    Licensed under the MIT License.
+
+17. Element Plus (https://github.com/element-plus/element-plus)
+    Copyright (c) 2020-2026 Element Plus contributors
+    Licensed under the MIT License.
+
+18. Ant Design (https://github.com/ant-design/ant-design)
+    Copyright (c) 2015-2026 Ant Group Co., Ltd.
+    Licensed under the MIT License.
+
+19. ECharts (https://github.com/apache/echarts)
+    Copyright (c) 2017-2026 The Apache Software Foundation
+    Licensed under the Apache License 2.0.
+
+20. HLS.js (https://github.com/video-dev/hls.js)
+    Copyright (c) 2017-2026 Dailymotion
+    Licensed under the Apache License 2.0.
+
+---------------------------------------------------------------------------
+Additional Attributions:
+---------------------------------------------------------------------------
+
+This product uses SpacemiT hardware acceleration components:
+- spacemit-onnxruntime: ONNX Runtime with SpacemiT EP for K3 RISC-V
+- llama.cpp-tools-spacemit: llama.cpp with SpacemiT ORT backend for K3 RISC-V
+Copyright (c) 2024-2026 SpacemiT (Hangzhou) Technology Co. Ltd.
