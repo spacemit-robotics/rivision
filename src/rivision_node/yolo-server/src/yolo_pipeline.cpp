@@ -16,9 +16,9 @@
 
 namespace yolo {
 
-YOLOPipeline::YOLOPipeline(int preproc_threads, int queue_size)
-    : num_preproc_threads_(preproc_threads > 0 ? preproc_threads : 2),
-      max_queue_size_(queue_size > 0 ? queue_size : 4) {
+YOLOPipeline::YOLOPipeline(int preproc_threads, int queue_size) :
+    num_preproc_threads_(preproc_threads > 0 ? preproc_threads : 2),
+    max_queue_size_(queue_size > 0 ? queue_size : 4) {
     printf("[YOLOPipeline] 初始化: %d 预处理线程, 队列=%d\n", num_preproc_threads_, max_queue_size_);
 }
 

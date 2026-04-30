@@ -34,9 +34,8 @@ int SpaceMIT_EnvInit(void) {
         return -1;
     }
 
-    std::cout << "[SpaceMIT] A100 NPU environment ready (EP will be attached to "
-                 "sessions)"
-              << std::endl;
+    std::cout << "[SpaceMIT] A100 NPU environment ready (EP will be attached to sessions)"
+        << std::endl;
     g_spacemit_initialized = true;
     return 0;
 }
@@ -79,8 +78,8 @@ int SpaceMIT_AttachToSessionOptions(OrtSessionOptions *options, int num_threads)
         // ★ 多 Session 共享线程池 (embed 有 text/vision 两个 session)
         provider_options["SPACEMIT_EP_USE_GLOBAL_INTRA_THREAD"] = "1";
 
-        std::cout << "[SpaceMIT] EP config: INTRA_THREAD_NUM=" << ep_threads << " (actual threads=" << ep_threads * 2
-                  << ")" << std::endl;
+        std::cout << "[SpaceMIT] EP config: INTRA_THREAD_NUM=" << ep_threads
+            << " (actual threads=" << ep_threads * 2 << ")" << std::endl;
 
         // Initialize SpaceMIT EP
         OrtStatus *status = Ort::SessionOptionsSpaceMITEnvInit(session_opts, provider_options);

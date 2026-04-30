@@ -5,3 +5,7 @@ AccessModifierOffset: -4
 ColumnLimit: 120
 AlignAfterOpenBracket: DontAlign
 SpacesBeforeTrailingComments: 2
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: CurrentLine
+AlignOperands: DontAlign

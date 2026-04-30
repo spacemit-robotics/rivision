@@ -492,8 +492,9 @@ DetectionResult YOLODetector::detect_from_tensor(const std::vector<float> &tenso
 // ★ P7: YOLOWorkerPool 实现 - 多 Session 并发推理
 // ============================================================
 
-YOLOWorkerPool::YOLOWorkerPool(int num_workers)
-    : num_workers_(num_workers > 0 ? num_workers : 2), detector_mutexes_(num_workers_ > 0 ? num_workers_ : 2) {
+YOLOWorkerPool::YOLOWorkerPool(int num_workers) :
+    num_workers_(num_workers > 0 ? num_workers : 2),
+    detector_mutexes_(num_workers_ > 0 ? num_workers_ : 2) {
     printf("[YOLOWorkerPool] 初始化 %d 个并发 worker\n", num_workers_);
 }
 
