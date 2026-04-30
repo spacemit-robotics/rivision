@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef YOLO_DETECTOR_H_
-#define YOLO_DETECTOR_H_
+#ifndef YOLO_DETECTOR_H
+#define YOLO_DETECTOR_H
 
 #include <atomic>
 #include <condition_variable>
@@ -20,7 +20,7 @@
 namespace yolo {
 
 struct Detection {
-    float x1, y1, x2, y2; // 归一化坐标 [0, 1]
+    float x1, y1, x2, y2;  // 归一化坐标 [0, 1]
     int class_id;
     std::string class_name;
     float confidence;
@@ -76,14 +76,14 @@ private:
 
     // Worker 管理
     std::vector<std::unique_ptr<YOLODetector>> detectors_;
-    std::vector<std::mutex> detector_mutexes_; // 每个 detector 一个锁
-    std::atomic<int> next_worker_{0};          // Round-robin 选择
-    std::atomic<int> active_workers_{0};       // 当前活跃 worker 数
+    std::vector<std::mutex> detector_mutexes_;  // 每个 detector 一个锁
+    std::atomic<int> next_worker_{0};           // Round-robin 选择
+    std::atomic<int> active_workers_{0};        // 当前活跃 worker 数
 };
 
 // COCO 类别名称
 extern const std::vector<std::string> COCO_CLASSES;
 
-} // namespace yolo
+}  // namespace yolo
 
-#endif // YOLO_DETECTOR_H_
+#endif  // YOLO_DETECTOR_H

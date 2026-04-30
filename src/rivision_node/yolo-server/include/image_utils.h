@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef IMAGE_UTILS_H_
-#define IMAGE_UTILS_H_
+#ifndef IMAGE_UTILS_H
+#define IMAGE_UTILS_H
 
 #include <cstdint>
 #include <string>
@@ -25,6 +25,6 @@ std::vector<float> resize_and_normalize(const ImageData &img, int target_width, 
 
 std::string base64_decode(const std::string &encoded);
 
-} // namespace image
+}  // namespace image
 
-#endif // IMAGE_UTILS_H_
+#endif  // IMAGE_UTILS_H

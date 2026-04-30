@@ -33,4 +33,4 @@ int SpaceMIT_IsAvailable(void);
 }
 #endif
 
-#endif // SPACEMIT_CGO_H
+#endif  // SPACEMIT_CGO_H

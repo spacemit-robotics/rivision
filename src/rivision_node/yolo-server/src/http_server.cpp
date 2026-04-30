@@ -266,4 +266,4 @@ void Server::stop() {
     impl_->thread_pool.reset();
 }
 
-} // namespace http
+}  // namespace http

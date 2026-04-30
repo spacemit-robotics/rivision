@@ -117,4 +117,4 @@ std::vector<float> resize_and_normalize(const ImageData &img, int target_width, 
     return output;
 }
 
-} // namespace image
+}  // namespace image

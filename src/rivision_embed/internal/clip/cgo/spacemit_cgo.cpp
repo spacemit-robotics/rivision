@@ -24,7 +24,7 @@ extern "C" {
 // Initialize SpaceMIT EP environment (call once at startup)
 int SpaceMIT_EnvInit(void) {
     if (g_spacemit_initialized) {
-        return 0; // Already initialized
+        return 0;  // Already initialized
     }
 
     // Check for NPU device
@@ -71,7 +71,7 @@ int SpaceMIT_AttachToSessionOptions(OrtSessionOptions *options, int num_threads)
 
         // ★ 关键: EP 线程数 = num_threads/2，因为 EP 会创建 2×N 线程
         // 要使用 8 核，设置 SPACEMIT_EP_INTRA_THREAD_NUM=4 (创建 8 线程)
-        int ep_threads = (num_threads + 1) / 2; // 8->4, 4->2
+        int ep_threads = (num_threads + 1) / 2;  // 8->4, 4->2
         if (ep_threads < 1)
             ep_threads = 1;
         provider_options["SPACEMIT_EP_INTRA_THREAD_NUM"] = std::to_string(ep_threads);
@@ -104,4 +104,4 @@ int SpaceMIT_AttachToSessionOptions(OrtSessionOptions *options, int num_threads)
 
 int SpaceMIT_IsAvailable(void) { return g_spacemit_initialized ? 1 : 0; }
 
-} // extern "C"
+}  // extern "C"

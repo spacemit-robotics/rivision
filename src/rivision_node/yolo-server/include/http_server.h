@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef HTTP_SERVER_H_
-#define HTTP_SERVER_H_
+#ifndef HTTP_SERVER_H
+#define HTTP_SERVER_H
 
 #include <functional>
 #include <map>
@@ -51,4 +51,4 @@ private:
 
 }  // namespace http
 
-#endif  // HTTP_SERVER_H_
+#endif  // HTTP_SERVER_H

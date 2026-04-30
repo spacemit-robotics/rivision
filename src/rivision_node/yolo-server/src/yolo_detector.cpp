@@ -29,23 +29,18 @@
 
 namespace yolo {
 
-const std::vector<std::string> COCO_CLASSES = {
-    "person",         "bicycle",    "car",           "motorcycle",    "airplane",     "bus",           "train",
-    "truck",          "boat",       "traffic light", "fire hydrant",  "stop sign",    "parking meter", "bench",
-    "bird",           "cat",        "dog",           "horse",         "sheep",        "cow",           "elephant",
-    "bear",           "zebra",      "giraffe",       "backpack",      "umbrella",     "handbag",       "tie",
-    "suitcase",       "frisbee",    "skis",          "snowboard",     "sports ball",  "kite",          "baseball bat",
-    "baseball glove", "skateboard", "surfboard",     "tennis racket", "bottle",       "wine glass",    "cup",
-    "fork",           "knife",      "spoon",         "bowl",          "banana",       "apple",         "sandwich",
-    "orange",         "broccoli",   "carrot",        "hot dog",       "pizza",        "donut",         "cake",
-    "chair",          "couch",      "potted plant",  "bed",           "dining table", "toilet",        "tv",
-    "laptop",         "mouse",      "remote",        "keyboard",      "cell phone",   "microwave",     "oven",
-    "toaster",        "sink",       "refrigerator",  "book",          "clock",        "vase",          "scissors",
-    "teddy bear",     "hair drier", "toothbrush"};
+const std::vector<std::string> COCO_CLASSES = {"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
+    "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog",
+    "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie",
+    "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard",
+    "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant",
+    "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven",
+    "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"};
 
-static constexpr float CONF_THRESHOLD = 0.35f; // ★ 提高置信度阈值，减少误检
+static constexpr float CONF_THRESHOLD = 0.35f;  // ★ 提高置信度阈值，减少误检
 static constexpr float NMS_THRESHOLD = 0.45f;
-static constexpr int MAX_DETECTIONS_BEFORE_NMS = 300; // ★ NMS 前最大检测数
+static constexpr int MAX_DETECTIONS_BEFORE_NMS = 300;  // ★ NMS 前最大检测数
 
 // ★ 关键修复: 全局共享 Ort::Env (ONNX Runtime 要求进程级单例)
 // 多个 Env 实例会导致资源竞争和 SpacemiT EP 初始化冲突
@@ -88,7 +83,7 @@ bool YOLODetector::load(const std::string &model_path) {
 #ifdef USE_ONNX
     try {
         // ★ K3 SpacemiT EP: SPACEMIT_EP_INTRA_THREAD_NUM=4 → 4 个 A100 核心 (8-11)
-        int intra_threads = 4; // 默认 4 线程
+        int intra_threads = 4;  // 默认 4 线程
         int inter_threads = 1;
 
         const char *env_intra = std::getenv("YOLO_THREADS");
@@ -98,7 +93,7 @@ bool YOLODetector::load(const std::string &model_path) {
             if (intra_threads < 1)
                 intra_threads = 1;
             if (intra_threads > 8)
-                intra_threads = 8; // K3 A100 最多 8 核心
+                intra_threads = 8;  // K3 A100 最多 8 核心
         }
         if (env_inter) {
             inter_threads = std::atoi(env_inter);
@@ -197,7 +192,7 @@ bool YOLODetector::load(const std::string &model_path) {
 
         printf("[YOLODetector] Model: %s\n", model_path.c_str());
         printf("[YOLODetector] Input: %s [%ld,%ld,%ld,%ld]\n", impl_->input_name.c_str(), impl_->batch_size,
-               impl_->input_c, impl_->input_h, impl_->input_w);
+            impl_->input_c, impl_->input_h, impl_->input_w);
         printf("[YOLODetector] Output: %s [%ld,%ld]\n", impl_->output_name.c_str(), impl_->out_dim1, impl_->out_dim2);
 
         impl_->model_path = model_path;
@@ -287,9 +282,9 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float> &outpu
         float box_w = det.x2 - det.x1;
         float box_h = det.y2 - det.y1;
         if (box_w < 0.01f || box_h < 0.01f)
-            continue; // 太小
+            continue;  // 太小
         if (box_w > 0.95f || box_h > 0.95f)
-            continue; // 太大（几乎满屏）
+            continue;  // 太大（几乎满屏）
 
         det.confidence = max_conf;
         det.class_id = max_class;
@@ -308,10 +303,10 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float> &outpu
 
     // NMS - 按置信度排序
     std::sort(detections.begin(), detections.end(),
-              [](const Detection &a, const Detection &b) { return a.confidence > b.confidence; });
+        [](const Detection &a, const Detection &b) { return a.confidence > b.confidence; });
 
     std::vector<Detection> result;
-    result.reserve(50); // ★ 预分配，避免重复扩容
+    result.reserve(50);  // ★ 预分配，避免重复扩容
     std::vector<bool> suppressed(detections.size(), false);
 
     for (size_t i = 0; i < detections.size(); i++) {
@@ -378,8 +373,8 @@ DetectionResult YOLODetector::detect(const std::vector<uint8_t> &jpeg_data) {
             tensor_size = batch_data.size();
         }
 
-        auto input = Ort::Value::CreateTensor<float>(memory_info, tensor_data, tensor_size, input_shape.data(),
-                                                     input_shape.size());
+        auto input = Ort::Value::CreateTensor<float>(
+            memory_info, tensor_data, tensor_size, input_shape.data(), input_shape.size());
 
         const char *input_names[] = {impl_->input_name.c_str()};
         const char *output_names[] = {impl_->output_name.c_str()};
@@ -464,8 +459,8 @@ DetectionResult YOLODetector::detect_from_tensor(const std::vector<float> &tenso
             tensor_size = batch_data.size();
         }
 
-        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(memory_info, const_cast<float *>(tensor_data),
-                                                                  tensor_size, input_shape.data(), input_shape.size());
+        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+            memory_info, const_cast<float *>(tensor_data), tensor_size, input_shape.data(), input_shape.size());
 
         const char *input_names[] = {impl_->input_name.c_str()};
         const char *output_names[] = {impl_->output_name.c_str()};
@@ -566,4 +561,4 @@ DetectionResult YOLOWorkerPool::detect(const std::vector<uint8_t> &jpeg_data) {
     return result;
 }
 
-} // namespace yolo
+}  // namespace yolo

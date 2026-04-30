@@ -184,4 +184,4 @@ int YOLOPipeline::get_queue_size() const {
     return static_cast<int>(preproc_queue_.size() + infer_queue_.size());
 }
 
-} // namespace yolo
+}  // namespace yolo

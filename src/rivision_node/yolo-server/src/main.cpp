@@ -52,7 +52,7 @@ public:
     bool load(const std::string &model_path) override { return pipeline_.load(model_path); }
     yolo::DetectionResult detect(const std::vector<uint8_t> &jpeg_data) override { return pipeline_.detect(jpeg_data); }
     bool is_loaded() const override { return pipeline_.is_loaded(); }
-    int get_workers() const override { return 1; } // Pipeline 模式单 Session
+    int get_workers() const override { return 1; }  // Pipeline 模式单 Session
     int get_active() const override { return pipeline_.get_active_preproc(); }
     std::string get_mode() const override { return "pipeline"; }
 

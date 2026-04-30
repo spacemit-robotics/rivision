@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef YOLO_PIPELINE_H_
-#define YOLO_PIPELINE_H_
+#ifndef YOLO_PIPELINE_H
+#define YOLO_PIPELINE_H
 
 #include <atomic>
 #include <condition_variable>
@@ -25,7 +25,7 @@ namespace yolo {
 // 预处理数据缓存
 // ============================================================
 struct PreprocData {
-    std::vector<float> tensor; // 预处理后的张量
+    std::vector<float> tensor;  // 预处理后的张量
     int orig_width;
     int orig_height;
     bool valid = false;
@@ -92,4 +92,4 @@ private:
 
 }  // namespace yolo
 
-#endif  // YOLO_PIPELINE_H_
+#endif  // YOLO_PIPELINE_H
