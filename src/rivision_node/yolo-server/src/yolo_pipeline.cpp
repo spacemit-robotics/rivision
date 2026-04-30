@@ -31,8 +31,9 @@ YOLOPipeline::~YOLOPipeline() {
     infer_cv_.notify_all();
 
     // 等待线程结束
-    for (auto& t : preproc_threads_) {
-        if (t.joinable()) t.join();
+    for (auto &t : preproc_threads_) {
+        if (t.joinable())
+            t.join();
     }
     if (infer_thread_.joinable()) {
         infer_thread_.join();
@@ -41,7 +42,7 @@ YOLOPipeline::~YOLOPipeline() {
     printf("[YOLOPipeline] 销毁\n");
 }
 
-bool YOLOPipeline::load(const std::string& model_path) {
+bool YOLOPipeline::load(const std::string &model_path) {
     detector_ = std::make_unique<YOLODetector>();
     if (!detector_->load(model_path)) {
         return false;
@@ -70,8 +71,10 @@ void YOLOPipeline::preproc_worker() {
             std::unique_lock<std::mutex> lock(preproc_mutex_);
             preproc_cv_.wait(lock, [this]() { return !preproc_queue_.empty() || !running_; });
 
-            if (!running_ && preproc_queue_.empty()) break;
-            if (preproc_queue_.empty()) continue;
+            if (!running_ && preproc_queue_.empty())
+                break;
+            if (preproc_queue_.empty())
+                continue;
 
             item = std::move(preproc_queue_.front());
             preproc_queue_.pop();
@@ -81,8 +84,8 @@ void YOLOPipeline::preproc_worker() {
         active_preproc_.fetch_add(1);
 
         // 执行预处理
-        auto& jpeg_data = item.first;
-        auto& data = item.second;
+        auto &jpeg_data = item.first;
+        auto &data = item.second;
 
         image::ImageData img;
         if (image::decode_jpeg(jpeg_data, img)) {
@@ -116,8 +119,10 @@ void YOLOPipeline::inference_worker() {
             std::unique_lock<std::mutex> lock(infer_mutex_);
             infer_cv_.wait(lock, [this]() { return !infer_queue_.empty() || !running_; });
 
-            if (!running_ && infer_queue_.empty()) break;
-            if (infer_queue_.empty()) continue;
+            if (!running_ && infer_queue_.empty())
+                break;
+            if (infer_queue_.empty())
+                continue;
 
             data = std::move(infer_queue_.front());
             infer_queue_.pop();
@@ -144,7 +149,7 @@ void YOLOPipeline::inference_worker() {
     }
 }
 
-std::future<DetectionResult> YOLOPipeline::detect_async(const std::vector<uint8_t>& jpeg_data) {
+std::future<DetectionResult> YOLOPipeline::detect_async(const std::vector<uint8_t> &jpeg_data) {
     auto data = std::make_shared<PreprocData>();
     data->request_id = next_request_id_.fetch_add(1);
 
@@ -171,12 +176,12 @@ std::future<DetectionResult> YOLOPipeline::detect_async(const std::vector<uint8_
     return future;
 }
 
-DetectionResult YOLOPipeline::detect(const std::vector<uint8_t>& jpeg_data) { return detect_async(jpeg_data).get(); }
+DetectionResult YOLOPipeline::detect(const std::vector<uint8_t> &jpeg_data) { return detect_async(jpeg_data).get(); }
 
 int YOLOPipeline::get_queue_size() const {
-    std::lock_guard<std::mutex> lock1(const_cast<std::mutex&>(preproc_mutex_));
-    std::lock_guard<std::mutex> lock2(const_cast<std::mutex&>(infer_mutex_));
+    std::lock_guard<std::mutex> lock1(const_cast<std::mutex &>(preproc_mutex_));
+    std::lock_guard<std::mutex> lock2(const_cast<std::mutex &>(infer_mutex_));
     return static_cast<int>(preproc_queue_.size() + infer_queue_.size());
 }
 
-}  // namespace yolo
+} // namespace yolo

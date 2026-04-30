@@ -28,7 +28,7 @@
 // ThreadPool: 避免每个请求创建新线程导致的内存累积
 // ============================================================
 class ThreadPool {
-   public:
+public:
     // ★ 增加默认线程数到 8，更好隐藏网络 I/O 延迟
     explicit ThreadPool(size_t num_threads = 8) : stop_(false) {
         for (size_t i = 0; i < num_threads; ++i) {
@@ -38,7 +38,8 @@ class ThreadPool {
                     {
                         std::unique_lock<std::mutex> lock(queue_mutex_);
                         condition_.wait(lock, [this] { return stop_ || !tasks_.empty(); });
-                        if (stop_ && tasks_.empty()) return;
+                        if (stop_ && tasks_.empty())
+                            return;
                         task = std::move(tasks_.front());
                         tasks_.pop();
                     }
@@ -55,8 +56,9 @@ class ThreadPool {
             stop_ = true;
         }
         condition_.notify_all();
-        for (std::thread& worker : workers_) {
-            if (worker.joinable()) worker.join();
+        for (std::thread &worker : workers_) {
+            if (worker.joinable())
+                worker.join();
         }
         printf("[ThreadPool] Destroyed\n");
     }
@@ -64,13 +66,14 @@ class ThreadPool {
     void enqueue(std::function<void()> task) {
         {
             std::unique_lock<std::mutex> lock(queue_mutex_);
-            if (stop_) return;
+            if (stop_)
+                return;
             tasks_.emplace(std::move(task));
         }
         condition_.notify_one();
     }
 
-   private:
+private:
     std::vector<std::thread> workers_;
     std::queue<std::function<void()>> tasks_;
     std::mutex queue_mutex_;
@@ -112,12 +115,14 @@ struct Server::Impl {
         // 解析头部
         size_t content_length = 0;
         while (std::getline(iss, line) && line != "\r" && !line.empty()) {
-            if (line.back() == '\r') line.pop_back();
+            if (line.back() == '\r')
+                line.pop_back();
             size_t pos = line.find(':');
             if (pos != std::string::npos) {
                 std::string key = line.substr(0, pos);
                 std::string value = line.substr(pos + 1);
-                while (!value.empty() && value[0] == ' ') value.erase(0, 1);
+                while (!value.empty() && value[0] == ' ')
+                    value.erase(0, 1);
                 req.headers[key] = value;
 
                 if (key == "Content-Length") {
@@ -127,7 +132,7 @@ struct Server::Impl {
         }
 
         // 解析body（★ 修复：支持二进制数据，不能用 C 字符串操作）
-        const char* body_start = strstr(buffer, "\r\n\r\n");
+        const char *body_start = strstr(buffer, "\r\n\r\n");
         if (body_start) {
             size_t header_len = (body_start + 4) - buffer;
             size_t body_in_buffer = bytes_read - header_len;
@@ -136,7 +141,8 @@ struct Server::Impl {
             // 如果body不完整，继续读取
             while (req.body.size() < content_length) {
                 bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
-                if (bytes_read <= 0) break;
+                if (bytes_read <= 0)
+                    break;
                 // ★ 使用 append(ptr, len) 支持二进制数据
                 req.body.append(buffer, bytes_read);
             }
@@ -152,19 +158,21 @@ struct Server::Impl {
             res.status_code = 204;
         } else {
             // 路由
-            RequestHandler* handler = nullptr;
+            RequestHandler *handler = nullptr;
             if (req.method == "GET") {
                 auto it = get_handlers.find(req.path);
-                if (it != get_handlers.end()) handler = &it->second;
+                if (it != get_handlers.end())
+                    handler = &it->second;
             } else if (req.method == "POST") {
                 auto it = post_handlers.find(req.path);
-                if (it != post_handlers.end()) handler = &it->second;
+                if (it != post_handlers.end())
+                    handler = &it->second;
             }
 
             if (handler) {
                 try {
                     (*handler)(req, res);
-                } catch (const std::exception& e) {
+                } catch (const std::exception &e) {
                     res.status_code = 500;
                     res.set_json("{\"error\":\"" + std::string(e.what()) + "\"}");
                 }
@@ -177,7 +185,7 @@ struct Server::Impl {
         // 构建响应
         std::ostringstream response;
         response << "HTTP/1.1 " << res.status_code << " OK\r\n";
-        for (const auto& [key, value] : res.headers) {
+        for (const auto &[key, value] : res.headers) {
             response << key << ": " << value << "\r\n";
         }
         response << "Content-Length: " << res.body.size() << "\r\n";
@@ -195,11 +203,11 @@ Server::Server() : impl_(std::make_unique<Impl>()) {}
 
 Server::~Server() { stop(); }
 
-void Server::get(const std::string& path, RequestHandler handler) { impl_->get_handlers[path] = handler; }
+void Server::get(const std::string &path, RequestHandler handler) { impl_->get_handlers[path] = handler; }
 
-void Server::post(const std::string& path, RequestHandler handler) { impl_->post_handlers[path] = handler; }
+void Server::post(const std::string &path, RequestHandler handler) { impl_->post_handlers[path] = handler; }
 
-bool Server::listen(const std::string& host, int port) {
+bool Server::listen(const std::string &host, int port) {
     impl_->server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (impl_->server_fd < 0) {
         return false;
@@ -213,7 +221,7 @@ bool Server::listen(const std::string& host, int port) {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
 
-    if (bind(impl_->server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+    if (bind(impl_->server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         close(impl_->server_fd);
         return false;
     }
@@ -234,9 +242,10 @@ bool Server::listen(const std::string& host, int port) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
 
-        int client_fd = accept(impl_->server_fd, (struct sockaddr*)&client_addr, &client_len);
+        int client_fd = accept(impl_->server_fd, (struct sockaddr *)&client_addr, &client_len);
         if (client_fd < 0) {
-            if (impl_->running) continue;
+            if (impl_->running)
+                continue;
             break;
         }
 
@@ -257,4 +266,4 @@ void Server::stop() {
     impl_->thread_pool.reset();
 }
 
-}  // namespace http
+} // namespace http

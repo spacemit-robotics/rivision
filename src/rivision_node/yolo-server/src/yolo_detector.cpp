@@ -43,14 +43,14 @@ const std::vector<std::string> COCO_CLASSES = {
     "toaster",        "sink",       "refrigerator",  "book",          "clock",        "vase",          "scissors",
     "teddy bear",     "hair drier", "toothbrush"};
 
-static constexpr float CONF_THRESHOLD = 0.35f;  // ★ 提高置信度阈值，减少误检
+static constexpr float CONF_THRESHOLD = 0.35f; // ★ 提高置信度阈值，减少误检
 static constexpr float NMS_THRESHOLD = 0.45f;
-static constexpr int MAX_DETECTIONS_BEFORE_NMS = 300;  // ★ NMS 前最大检测数
+static constexpr int MAX_DETECTIONS_BEFORE_NMS = 300; // ★ NMS 前最大检测数
 
 // ★ 关键修复: 全局共享 Ort::Env (ONNX Runtime 要求进程级单例)
 // 多个 Env 实例会导致资源竞争和 SpacemiT EP 初始化冲突
 #ifdef USE_ONNX
-static Ort::Env& get_global_env() {
+static Ort::Env &get_global_env() {
     static Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "yolo-server");
     return env;
 }
@@ -84,24 +84,28 @@ struct YOLODetector::Impl {
 YOLODetector::YOLODetector() : impl_(std::make_unique<Impl>()) {}
 YOLODetector::~YOLODetector() = default;
 
-bool YOLODetector::load(const std::string& model_path) {
+bool YOLODetector::load(const std::string &model_path) {
 #ifdef USE_ONNX
     try {
         // ★ K3 SpacemiT EP: SPACEMIT_EP_INTRA_THREAD_NUM=4 → 4 个 A100 核心 (8-11)
-        int intra_threads = 4;  // 默认 4 线程
+        int intra_threads = 4; // 默认 4 线程
         int inter_threads = 1;
 
-        const char* env_intra = std::getenv("YOLO_THREADS");
-        const char* env_inter = std::getenv("YOLO_INTER_THREADS");
+        const char *env_intra = std::getenv("YOLO_THREADS");
+        const char *env_inter = std::getenv("YOLO_INTER_THREADS");
         if (env_intra) {
             intra_threads = std::atoi(env_intra);
-            if (intra_threads < 1) intra_threads = 1;
-            if (intra_threads > 8) intra_threads = 8;  // K3 A100 最多 8 核心
+            if (intra_threads < 1)
+                intra_threads = 1;
+            if (intra_threads > 8)
+                intra_threads = 8; // K3 A100 最多 8 核心
         }
         if (env_inter) {
             inter_threads = std::atoi(env_inter);
-            if (inter_threads < 1) inter_threads = 1;
-            if (inter_threads > 4) inter_threads = 1;
+            if (inter_threads < 1)
+                inter_threads = 1;
+            if (inter_threads > 4)
+                inter_threads = 1;
         }
 
         // ★ SpacemiT EP: ORT 线程数设为 1，由 SPACEMIT_EP_INTRA_THREAD_NUM 控制
@@ -123,17 +127,17 @@ bool YOLODetector::load(const std::string& model_path) {
 #ifdef USE_CUDA_EP
         // CUDA EP for NVIDIA Jetson Orin
         try {
-            OrtCUDAProviderOptionsV2* cuda_options = nullptr;
+            OrtCUDAProviderOptionsV2 *cuda_options = nullptr;
             Ort::GetApi().CreateCUDAProviderOptions(&cuda_options);
 
-            std::vector<const char*> keys = {"device_id", "arena_extend_strategy", "cudnn_conv_algo_search"};
-            std::vector<const char*> values = {"0", "kNextPowerOfTwo", "EXHAUSTIVE"};
+            std::vector<const char *> keys = {"device_id", "arena_extend_strategy", "cudnn_conv_algo_search"};
+            std::vector<const char *> values = {"0", "kNextPowerOfTwo", "EXHAUSTIVE"};
             Ort::GetApi().UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size());
 
             impl_->session_options.AppendExecutionProvider_CUDA_V2(*cuda_options);
             Ort::GetApi().ReleaseCUDAProviderOptions(cuda_options);
             printf("[YOLODetector] \u2713 CUDA EP enabled (Jetson Orin GPU)\n");
-        } catch (const Ort::Exception& e) {
+        } catch (const Ort::Exception &e) {
             printf("[YOLODetector] \u2717 CUDA EP unavailable, using CPU fallback: %s\n", e.what());
         }
 #elif defined(USE_SPACEMIT_EP)
@@ -154,7 +158,7 @@ bool YOLODetector::load(const std::string& model_path) {
                 } else {
                     printf("[YOLODetector] SpacemiT EP session added (threads=%d, global_pool=ON)\n", intra_threads);
                 }
-            } catch (const Ort::Exception& e) {
+            } catch (const Ort::Exception &e) {
                 printf("[YOLODetector] SpacemiT EP error: %s\n", e.what());
             }
         }
@@ -199,7 +203,7 @@ bool YOLODetector::load(const std::string& model_path) {
         impl_->model_path = model_path;
         loaded_ = true;
         return true;
-    } catch (const Ort::Exception& e) {
+    } catch (const Ort::Exception &e) {
         printf("[YOLODetector] Failed to load: %s\n", e.what());
         return false;
     }
@@ -211,15 +215,16 @@ bool YOLODetector::load(const std::string& model_path) {
 #endif
 }
 
-std::vector<float> YOLODetector::preprocess(const std::vector<uint8_t>& jpeg_data, int& orig_width, int& orig_height) {
+std::vector<float> YOLODetector::preprocess(const std::vector<uint8_t> &jpeg_data, int &orig_width, int &orig_height) {
     image::ImageData img;
-    if (!image::decode_jpeg(jpeg_data, img)) return {};
+    if (!image::decode_jpeg(jpeg_data, img))
+        return {};
     orig_width = img.width;
     orig_height = img.height;
     return image::resize_and_normalize(img, impl_->input_w, impl_->input_h);
 }
 
-std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& output, int orig_width, int orig_height) {
+std::vector<Detection> YOLODetector::postprocess(const std::vector<float> &output, int orig_width, int orig_height) {
     std::vector<Detection> detections;
 
     // ★ 修复：动态计算 num_boxes 和 num_classes（从实际输出形状推导）
@@ -242,8 +247,8 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
     }
 
     // Letterbox 参数还原
-    float scale = std::min(static_cast<float>(impl_->input_w) / orig_width,
-                          static_cast<float>(impl_->input_h) / orig_height);
+    float scale =
+        std::min(static_cast<float>(impl_->input_w) / orig_width, static_cast<float>(impl_->input_h) / orig_height);
     float new_w = orig_width * scale;
     float new_h = orig_height * scale;
     float pad_x = (impl_->input_w - new_w) / 2.0f;
@@ -259,7 +264,8 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
                 max_class = c;
             }
         }
-        if (max_conf < CONF_THRESHOLD) continue;
+        if (max_conf < CONF_THRESHOLD)
+            continue;
 
         float cx = output[0 * num_boxes + i];
         float cy = output[1 * num_boxes + i];
@@ -280,8 +286,10 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
         // ★ 过滤无效框：太小(<1%)或太大(>95%)
         float box_w = det.x2 - det.x1;
         float box_h = det.y2 - det.y1;
-        if (box_w < 0.01f || box_h < 0.01f) continue;  // 太小
-        if (box_w > 0.95f || box_h > 0.95f) continue;  // 太大（几乎满屏）
+        if (box_w < 0.01f || box_h < 0.01f)
+            continue; // 太小
+        if (box_w > 0.95f || box_h > 0.95f)
+            continue; // 太大（几乎满屏）
 
         det.confidence = max_conf;
         det.class_id = max_class;
@@ -289,7 +297,8 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
         detections.push_back(det);
 
         // ★ 限制 NMS 前的检测数量，防止 O(n²) 爆炸
-        if (detections.size() >= MAX_DETECTIONS_BEFORE_NMS) break;
+        if (detections.size() >= MAX_DETECTIONS_BEFORE_NMS)
+            break;
     }
 
     // ★ 警告：检测数量异常多
@@ -299,21 +308,24 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
 
     // NMS - 按置信度排序
     std::sort(detections.begin(), detections.end(),
-              [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
+              [](const Detection &a, const Detection &b) { return a.confidence > b.confidence; });
 
     std::vector<Detection> result;
-    result.reserve(50);  // ★ 预分配，避免重复扩容
+    result.reserve(50); // ★ 预分配，避免重复扩容
     std::vector<bool> suppressed(detections.size(), false);
 
     for (size_t i = 0; i < detections.size(); i++) {
-        if (suppressed[i]) continue;
+        if (suppressed[i])
+            continue;
         result.push_back(detections[i]);
 
         // ★ 限制最终结果数量
-        if (result.size() >= 50) break;
+        if (result.size() >= 50)
+            break;
 
         for (size_t j = i + 1; j < detections.size(); j++) {
-            if (suppressed[j] || detections[j].class_id != detections[i].class_id) continue;
+            if (suppressed[j] || detections[j].class_id != detections[i].class_id)
+                continue;
             float ix1 = std::max(detections[i].x1, detections[j].x1);
             float iy1 = std::max(detections[i].y1, detections[j].y1);
             float ix2 = std::min(detections[i].x2, detections[j].x2);
@@ -321,13 +333,14 @@ std::vector<Detection> YOLODetector::postprocess(const std::vector<float>& outpu
             float inter = std::max(0.0f, ix2 - ix1) * std::max(0.0f, iy2 - iy1);
             float area_i = (detections[i].x2 - detections[i].x1) * (detections[i].y2 - detections[i].y1);
             float area_j = (detections[j].x2 - detections[j].x1) * (detections[j].y2 - detections[j].y1);
-            if (inter / (area_i + area_j - inter + 1e-6f) > NMS_THRESHOLD) suppressed[j] = true;
+            if (inter / (area_i + area_j - inter + 1e-6f) > NMS_THRESHOLD)
+                suppressed[j] = true;
         }
     }
     return result;
 }
 
-DetectionResult YOLODetector::detect(const std::vector<uint8_t>& jpeg_data) {
+DetectionResult YOLODetector::detect(const std::vector<uint8_t> &jpeg_data) {
     DetectionResult result;
     result.success = false;
 
@@ -353,7 +366,7 @@ DetectionResult YOLODetector::detect(const std::vector<uint8_t>& jpeg_data) {
 
         // batch > 1 时复制填充
         std::vector<float> batch_data;
-        float* tensor_data = input_tensor.data();
+        float *tensor_data = input_tensor.data();
         size_t tensor_size = input_tensor.size();
 
         if (bs > 1) {
@@ -368,17 +381,18 @@ DetectionResult YOLODetector::detect(const std::vector<uint8_t>& jpeg_data) {
         auto input = Ort::Value::CreateTensor<float>(memory_info, tensor_data, tensor_size, input_shape.data(),
                                                      input_shape.size());
 
-        const char* input_names[] = {impl_->input_name.c_str()};
-        const char* output_names[] = {impl_->output_name.c_str()};
+        const char *input_names[] = {impl_->input_name.c_str()};
+        const char *output_names[] = {impl_->output_name.c_str()};
 
         auto outputs = impl_->session->Run(Ort::RunOptions{nullptr}, input_names, &input, 1, output_names, 1);
 
-        auto& output_tensor = outputs[0];
-        const float* output_data = output_tensor.GetTensorData<float>();
+        auto &output_tensor = outputs[0];
+        const float *output_data = output_tensor.GetTensorData<float>();
         auto output_shape = output_tensor.GetTensorTypeAndShapeInfo().GetShape();
 
         size_t output_size = 1;
-        for (auto dim : output_shape) output_size *= dim;
+        for (auto dim : output_shape)
+            output_size *= dim;
 
         // 只取第一个 batch 的输出
         size_t single_batch_size = output_size / bs;
@@ -397,9 +411,9 @@ DetectionResult YOLODetector::detect(const std::vector<uint8_t>& jpeg_data) {
     result.detections.push_back(stub_det);
     result.success = true;
 #endif
-    } catch (const Ort::Exception& e) {
+    } catch (const Ort::Exception &e) {
         result.error = std::string("ONNX inference failed: ") + e.what();
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         result.error = std::string("Detection failed: ") + e.what();
     } catch (...) {
         result.error = "Detection failed: unknown error";
@@ -414,7 +428,7 @@ DetectionResult YOLODetector::detect(const std::vector<uint8_t>& jpeg_data) {
 // ============================================================
 // ★ 从预处理张量直接推理 (用于流水线模式，跳过预处理)
 // ============================================================
-DetectionResult YOLODetector::detect_from_tensor(const std::vector<float>& tensor, int orig_width, int orig_height) {
+DetectionResult YOLODetector::detect_from_tensor(const std::vector<float> &tensor, int orig_width, int orig_height) {
     DetectionResult result;
     result.success = false;
 
@@ -438,7 +452,7 @@ DetectionResult YOLODetector::detect_from_tensor(const std::vector<float>& tenso
 
         // 直接使用传入的张量
         std::vector<float> batch_data;
-        const float* tensor_data = tensor.data();
+        const float *tensor_data = tensor.data();
         size_t tensor_size = tensor.size();
 
         if (bs > 1) {
@@ -450,23 +464,23 @@ DetectionResult YOLODetector::detect_from_tensor(const std::vector<float>& tenso
             tensor_size = batch_data.size();
         }
 
-        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(memory_info, const_cast<float*>(tensor_data),
+        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(memory_info, const_cast<float *>(tensor_data),
                                                                   tensor_size, input_shape.data(), input_shape.size());
 
-        const char* input_names[] = {impl_->input_name.c_str()};
-        const char* output_names[] = {impl_->output_name.c_str()};
+        const char *input_names[] = {impl_->input_name.c_str()};
+        const char *output_names[] = {impl_->output_name.c_str()};
 
         auto outputs = impl_->session->Run(Ort::RunOptions{nullptr}, input_names, &input_tensor, 1, output_names, 1);
 
-        auto& out_tensor = outputs.front();
-        float* output_data = out_tensor.GetTensorMutableData<float>();
+        auto &out_tensor = outputs.front();
+        float *output_data = out_tensor.GetTensorMutableData<float>();
         size_t output_size = out_tensor.GetTensorTypeAndShapeInfo().GetElementCount();
 
         size_t single_batch_size = output_size / bs;
         std::vector<float> output_vec(output_data, output_data + single_batch_size);
         result.detections = postprocess(output_vec, orig_width, orig_height);
         result.success = true;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         result.error = std::string("Inference failed: ") + e.what();
     }
 #else
@@ -490,7 +504,7 @@ YOLOWorkerPool::YOLOWorkerPool(int num_workers)
 
 YOLOWorkerPool::~YOLOWorkerPool() { printf("[YOLOWorkerPool] 销毁 %d 个 worker\n", num_workers_); }
 
-bool YOLOWorkerPool::load(const std::string& model_path) {
+bool YOLOWorkerPool::load(const std::string &model_path) {
     model_path_ = model_path;
     detectors_.clear();
     detectors_.reserve(num_workers_);
@@ -512,7 +526,7 @@ bool YOLOWorkerPool::load(const std::string& model_path) {
     return true;
 }
 
-DetectionResult YOLOWorkerPool::detect(const std::vector<uint8_t>& jpeg_data) {
+DetectionResult YOLOWorkerPool::detect(const std::vector<uint8_t> &jpeg_data) {
     if (!loaded_ || detectors_.empty()) {
         DetectionResult result;
         result.success = false;
@@ -552,4 +566,4 @@ DetectionResult YOLOWorkerPool::detect(const std::vector<uint8_t>& jpeg_data) {
     return result;
 }
 
-}  // namespace yolo
+} // namespace yolo

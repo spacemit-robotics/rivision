@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#pragma once
+#ifndef HTTP_SERVER_H_
+#define HTTP_SERVER_H_
 
 #include <functional>
 #include <map>
@@ -24,28 +25,30 @@ struct Response {
     std::map<std::string, std::string> headers;
     std::string body;
 
-    void set_json(const std::string& json) {
+    void set_json(const std::string &json) {
         headers["Content-Type"] = "application/json";
         body = json;
     }
 };
 
-using RequestHandler = std::function<void(const Request&, Response&)>;
+using RequestHandler = std::function<void(const Request &, Response &)>;
 
 class Server {
-   public:
+public:
     Server();
     ~Server();
 
-    void get(const std::string& path, RequestHandler handler);
-    void post(const std::string& path, RequestHandler handler);
+    void get(const std::string &path, RequestHandler handler);
+    void post(const std::string &path, RequestHandler handler);
 
-    bool listen(const std::string& host, int port);
+    bool listen(const std::string &host, int port);
     void stop();
 
-   private:
+private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace http
+
+#endif  // HTTP_SERVER_H_

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#pragma once
+#ifndef YOLO_PIPELINE_H_
+#define YOLO_PIPELINE_H_
 
 #include <atomic>
 #include <condition_variable>
@@ -24,7 +25,7 @@ namespace yolo {
 // 预处理数据缓存
 // ============================================================
 struct PreprocData {
-    std::vector<float> tensor;  // 预处理后的张量
+    std::vector<float> tensor; // 预处理后的张量
     int orig_width;
     int orig_height;
     bool valid = false;
@@ -38,17 +39,17 @@ struct PreprocData {
 // 目标: 保持 NPU 100% 忙碌
 // ============================================================
 class YOLOPipeline {
-   public:
+public:
     explicit YOLOPipeline(int preproc_threads = 2, int queue_size = 4);
     ~YOLOPipeline();
 
-    bool load(const std::string& model_path);
+    bool load(const std::string &model_path);
 
     // 异步检测 (返回 future)
-    std::future<DetectionResult> detect_async(const std::vector<uint8_t>& jpeg_data);
+    std::future<DetectionResult> detect_async(const std::vector<uint8_t> &jpeg_data);
 
     // 同步检测 (等待结果)
-    DetectionResult detect(const std::vector<uint8_t>& jpeg_data);
+    DetectionResult detect(const std::vector<uint8_t> &jpeg_data);
 
     bool is_loaded() const { return loaded_; }
 
@@ -56,7 +57,7 @@ class YOLOPipeline {
     int get_queue_size() const;
     int get_active_preproc() const { return active_preproc_.load(); }
 
-   private:
+private:
     void preproc_worker();
     void inference_worker();
 
@@ -90,3 +91,5 @@ class YOLOPipeline {
 };
 
 }  // namespace yolo
+
+#endif  // YOLO_PIPELINE_H_

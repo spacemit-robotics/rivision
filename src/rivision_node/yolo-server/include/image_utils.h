@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#pragma once
+#ifndef IMAGE_UTILS_H_
+#define IMAGE_UTILS_H_
 
 #include <cstdint>
 #include <string>
@@ -18,10 +19,12 @@ struct ImageData {
     int channels;
 };
 
-bool decode_jpeg(const std::vector<uint8_t>& jpeg_data, ImageData& out);
+bool decode_jpeg(const std::vector<uint8_t> &jpeg_data, ImageData &out);
 
-std::vector<float> resize_and_normalize(const ImageData& img, int target_width, int target_height);
+std::vector<float> resize_and_normalize(const ImageData &img, int target_width, int target_height);
 
-std::string base64_decode(const std::string& encoded);
+std::string base64_decode(const std::string &encoded);
 
-}  // namespace image
+} // namespace image
+
+#endif // IMAGE_UTILS_H_
