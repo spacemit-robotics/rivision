@@ -1,0 +1,74 @@
+# RiVision Hub Configuration (v6_design §10.2)
+
+server:
+  host: "0.0.0.0"
+  port: 9280                         # Hub HTTP API port (default 9280)
+
+database:
+  type: "sqlite"                     # "sqlite" | "postgres"
+  url: "/var/lib/rivision/hub.db"
+
+redis:
+  url: ""                            # optional: "redis://localhost:6379"
+
+nodes:
+  heartbeat_timeout: 60              # seconds before marking offline
+  health_check_interval: 30          # seconds between health sweeps
+  config_path: ""                    # optional: static node config file
+  token_auth_enabled: false          # enable Token-based node registration
+  token_persistence: false           # persist tokens to SQLite
+
+alerts:
+  dedup_window: 60                   # seconds — same-target dedup window
+  integrations:
+    wechat:
+      enabled: false
+      webhook_url: ""
+    dingtalk:
+      enabled: false
+      webhook_url: ""
+      secret: ""
+    webhook:
+      enabled: false
+      url: ""
+      secret: ""
+    email:
+      enabled: false
+      smtp_host: ""
+      smtp_port: 587
+      from: ""
+      password: ""
+
+knowledge:
+  sync_interval: 60                  # seconds between push cycles
+
+auth:
+  token_secret: "rivision-hub-secret-change-me"
+  token_expiry_hours: 24
+
+embed:
+  url: "http://localhost:18081"       # Hub-side embed for query vectorization
+
+owl:
+  enabled: true                        # enable GB28181/ONVIF integration via rivision_owl
+  url: "http://localhost:15123"        # Hub OWL URL for camera discovery/metadata (no video)
+  username: "admin"                     # shared OWL login credentials
+  password: "admin123"                 # (used for Hub OWL + all Worker OWL instances)
+  use_rsa_auth: false                  # use RSA OAEP login (GoWVP mode)
+  cache_ttl: 300                       # RTSP URL cache TTL in seconds (default 5min)
+  # Architecture (Plan A: SIP-media split):
+  #   Hub OWL = SIP Registrar + discovery + PlayRemote (directs RTP to Worker ZLM)
+  #   Worker OWL = ONVIF local stream control (PlayChannel → local ZLM → RTSP)
+  #   Hub does NOT forward video — only SIP signaling text (~2KB/call)
+  #   GB28181: Hub OWL → PlayRemote(channel, worker_zlm) → Camera RTP → Worker ZLM
+  #   ONVIF/RTSP: Worker pulls directly from camera (no Hub involvement)
+  #   Workers register with Hub and report owl_url + zlm_host/zlm_http_port/zlm_rtsp_port
+  #   API: ?node_id= routes to Worker OWL; no node_id → Hub OWL (discovery/SIP)
+
+gateway:
+  url: "http://localhost:9090"        # rivision_gateway address
+
+search:
+  timeout_per_worker: 5              # seconds
+  default_limit: 50
+  max_limit: 200
