@@ -1,0 +1,35 @@
+{
+  "name": "rivision-app-web",
+  "version": "1.0.0",
+  "description": "RiVision Web Application - 独立前端，支持第三方集成",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.ts",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "pinia": "^2.1.7",
+    "axios": "^1.6.8",
+    "@vueuse/core": "^10.9.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.8",
+    "typescript": "~5.4.0",
+    "vue-tsc": "^2.0.6",
+    "@types/node": "^20.11.30",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.24.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
