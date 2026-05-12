@@ -1,0 +1,82 @@
+# Embed (CLIP) Configuration
+# Version: 1.0
+# Chinese-CLIP ViT-B/16 图文嵌入模型
+
+# Server settings
+server:
+  enabled: true
+  port: 8091
+  host: "127.0.0.1"
+
+# Model settings
+model:
+  # 模型基础目录 (相对于安装目录)
+  base_dir: "models/embed"
+  
+  # 模型名称
+  name: "chinese-clip-vit-b-16"
+  
+  # 视觉编码器
+  vision:
+    path: "cn_clip_vision.onnx"
+    input_size: [224, 224]
+    input_name: "pixel_values"
+    output_name: "image_features"
+  
+  # 文本编码器
+  text:
+    path: "cn_clip_text.onnx"
+    max_length: 52
+    input_names: ["input_ids", "attention_mask"]
+    output_name: "text_features"
+  
+  # 输出维度
+  embedding_dim: 512
+
+# Performance tuning
+performance:
+  # 推理线程数
+  # K3: 4-6 (SpaceMIT NPU 自动管理)
+  threads: 4
+  
+  # 设备选择 (auto = 自动检测 NPU/CPU)
+  device: "auto"
+  
+  # K3 NPU 加速 (SpaceMIT A100)
+  npu:
+    enabled: true
+    # NPU 可用时，ORT 线程设为 1，由 EP 控制
+    auto_threads: true
+
+# Vector search settings
+search:
+  # 最大向量数
+  max_vectors: 100000
+  
+  # 相似度阈值
+  similarity_threshold: 0.5
+  
+  # Top-K 返回数
+  default_top_k: 10
+  max_top_k: 100
+
+# Preprocessing
+preprocess:
+  # 图像预处理
+  image:
+    resize: [224, 224]
+    normalize:
+      mean: [0.48145466, 0.4578275, 0.40821073]
+      std: [0.26862954, 0.26130258, 0.27577711]
+  
+  # 文本预处理
+  text:
+    tokenizer: "bert-base-chinese"
+    max_length: 52
+    truncation: true
+    padding: true
+
+# Logging
+log:
+  level: "info"
+  file: ""  # Auto-filled from storage.data_dir

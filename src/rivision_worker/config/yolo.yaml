@@ -1,0 +1,56 @@
+# YOLO Inference Configuration
+# Version: 1.4
+
+# Model settings
+model:
+  # 模型基础目录 (相对于安装目录)
+  base_dir: "models/yolo"
+
+  # 目标检测模型 (riscv64 / K3 SpaceMIT NPU)
+  detection:
+    path: "yolo11/detection/910byolo11n_b2.q.onnx"
+
+  # 人脸检测模型
+  face:
+    path: "yolov5/face/yolov5n-face_cut.q.onnx"
+  
+  # 姿态估计模型
+  pose:
+    path: "yolov8/pose/yolov8n-pose.q.onnx"
+  
+  # 实例分割模型
+  segment:
+    path: "yolov8/segment/yolov8n-seg.q.onnx"
+  
+  # 通用参数
+  input_width: 640
+  input_height: 640
+  classes: 80  # COCO
+
+# Detection parameters
+detection:
+  confidence_threshold: 0.5
+  nms_threshold: 0.45
+  # Filter to specific classes (empty = all classes)
+  # classes: [0, 2]  # person, car
+
+# ByteTrack tracker
+tracker:
+  enabled: true
+  type: "bytetrack"
+  max_age: 30
+  min_hits: 3
+  iou_threshold: 0.3
+
+# Emotion analysis (G1 feature)
+emotion:
+  enabled: false
+  sample_interval_sec: 5
+  min_face_size: 64
+
+# COCO 80 class names (auto-populated if not specified)
+# class_names:
+#   - person
+#   - bicycle
+#   - car
+#   # ... etc

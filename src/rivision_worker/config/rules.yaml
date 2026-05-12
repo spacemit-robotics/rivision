@@ -1,0 +1,78 @@
+# RiVision Rules Configuration
+# Version: 1.0
+
+rules:
+  # Example: Zone intrusion detection
+  - id: "intrusion_01"
+    name: "围栏入侵检测"
+    enabled: true
+    streams: ["*"]
+    trigger:
+      type: "zone"
+      zone:
+        name: "围栏区域"
+        polygon:
+          - [0.1, 0.1]
+          - [0.9, 0.1]
+          - [0.9, 0.9]
+          - [0.1, 0.9]
+      classes: [0]  # person
+      min_confidence: 0.5
+    actions:
+      - type: "vlm_verify"
+        prompt: "这个人是否正在翻越围栏或进入禁区？"
+        vlm_timeout_ms: 3000
+      - type: "alert"
+        level: "critical"
+      - type: "notify"
+        channels: ["wechat"]
+      - type: "record"
+        pre_sec: 5
+        post_sec: 10
+
+  # Example: People counting
+  - id: "crowding_01"
+    name: "人员聚集告警"
+    enabled: true
+    streams: ["*"]
+    trigger:
+      type: "class_count"
+      classes: [0]  # person
+      count_operator: ">"
+      count_value: 10
+      min_confidence: 0.4
+    actions:
+      - type: "alert"
+        level: "warning"
+      - type: "notify"
+        channels: ["wechat"]
+
+  # Example: Dwell time detection
+  - id: "loitering_01"
+    name: "长时间逗留"
+    enabled: true
+    streams: ["*"]
+    trigger:
+      type: "dwell_time"
+      dwell_sec: 180  # 3 minutes
+      classes: [0]  # person
+      min_confidence: 0.5
+    actions:
+      - type: "alert"
+        level: "info"
+
+  # Example: Line crossing
+  - id: "entry_01"
+    name: "入口计数"
+    enabled: false
+    streams: ["stream-001"]
+    trigger:
+      type: "line_cross"
+      line:
+        start: [0.0, 0.5]
+        end: [1.0, 0.5]
+        direction: "both"  # in | out | both
+      classes: [0]  # person
+    actions:
+      - type: "alert"
+        level: "info"

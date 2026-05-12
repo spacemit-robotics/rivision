@@ -1,0 +1,23 @@
+[Unit]
+Description=RiVision Worker Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/rivision/rivision_worker
+ExecStart=/opt/rivision/rivision_worker/bin/rivision_worker -c /opt/rivision/rivision_worker/config/worker.yaml
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+# Environment
+Environment="LD_LIBRARY_PATH=/opt/rivision/rivision_worker/lib"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-worker
+
+[Install]
+WantedBy=multi-user.target

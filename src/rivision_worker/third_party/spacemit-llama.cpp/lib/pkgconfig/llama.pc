@@ -1,0 +1,10 @@
+prefix=/home/share/nfs_share/llama.cpp/build/installed
+exec_prefix=/home/share/nfs_share/llama.cpp/build/installed
+libdir=/home/share/nfs_share/llama.cpp/build/installed/lib
+includedir=/home/share/nfs_share/llama.cpp/build/installed/include
+
+Name: llama
+Description: Port of Facebook's LLaMA model in C/C++
+Version: 0.0.9104
+Libs: -L${libdir} -lggml -lggml-base -lllama
+Cflags: -I${includedir}

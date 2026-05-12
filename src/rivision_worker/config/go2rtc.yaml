@@ -1,0 +1,61 @@
+# go2rtc Configuration for RiVision Worker
+# Version: 1.0
+#
+# go2rtc 用于将 Worker 输出的 RTSP 流转换为浏览器可播放格式
+# 输入: Worker 的 RTSP 输出 (rtsp://localhost:8554/stream/xxx)
+# 输出: WebRTC / MSE / HLS / fMP4 供浏览器播放
+#
+# 安装位置: /opt/rivision/rivision_worker/bin/go2rtc
+# 配置位置: /opt/rivision/rivision_worker/config/go2rtc.yaml
+#
+# 启动命令:
+#   /opt/rivision/rivision_worker/bin/go2rtc -config /opt/rivision/rivision_worker/config/go2rtc.yaml
+
+# API 服务配置
+api:
+  listen: ":1984"
+  # 允许跨域访问 (Hub Web UI)
+  origin: "*"
+
+# RTSP 服务配置 (go2rtc 自身的 RTSP 服务)
+# 注意: Worker 使用 :8554 输出 RTSP，go2rtc 使用 :8555 避免冲突
+rtsp:
+  listen: ":8555"
+  # 默认使用 TCP
+  default_query: "tcp"
+
+# WebRTC 配置
+webrtc:
+  # STUN 服务器列表 (用于 NAT 穿透)
+  candidates:
+    - stun:stun.l.google.com:19302
+  # ICE 服务器 (可选，用于复杂网络环境)
+  # ice_servers:
+  #   - urls: [stun:stun.l.google.com:19302]
+
+# 流配置
+# 实际流由 Worker 通过 API 动态注册
+# 格式: PUT /api/streams?src={RTSP_URL}&name={CAMERA_ID}
+streams:
+  # 示例: 从 Worker 的 RTSP 输出获取流
+  # cam_12345678:
+  #   - rtsp://127.0.0.1:8554/stream/cam_12345678
+
+# 日志配置
+log:
+  level: info
+  # output: /opt/rivision/rivision_worker/logs/go2rtc.log
+
+# FFmpeg 配置 (可选，用于转码 HEVC→H264)
+# ffmpeg:
+#   bin: /usr/bin/ffmpeg
+#   # 硬件加速示例 (Intel QSV)
+#   # hwaccel: qsv
+
+# RTMP 配置 (可选)
+# rtmp:
+#   listen: ":1935"
+
+# HomeKit 配置 (可选)
+# homekit:
+#   enabled: false

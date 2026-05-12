@@ -1,0 +1,68 @@
+# RiVision Worker Configuration
+# Version: 1.0
+
+# Node identification
+node_id: "worker-001"
+version: "1.0.0"  # Worker software version
+
+# HTTP Server settings
+server:
+  host: "0.0.0.0"
+  http_port: 8080
+  advertise_host: ""  # IP to advertise to Hub (auto-detect if empty)
+  max_connections: 100
+  request_timeout_ms: 30000
+
+# Hub connection
+hub:
+  url: "ws://localhost:8081/ws/worker"
+  token: ""
+  reconnect_ms: 3000
+  heartbeat_ms: 10000
+  max_reconnect_attempts: 0  # 0 = infinite
+
+# Inference settings
+inference:
+  yolo_config: "config/yolo.yaml"
+  vlm_config: "config/vlm.yaml"
+  embed_config: "config/embed.yaml"
+  device: "npu"  # npu | cpu
+
+# Stream settings (go2rtc integration)
+streams:
+  go2rtc_url: "http://localhost:1984"  # go2rtc API endpoint
+  go2rtc_port: 1984                    # go2rtc HTTP/WebSocket port
+  rtsp_port: 8554                      # Worker RTSP output port
+  max_streams: 4
+
+# Search settings
+search:
+  max_vectors: 100000
+  embedding_dim: 512
+  persist_path: ""  # Auto-filled from data_dir
+
+# Storage paths
+storage:
+  data_dir: "/opt/rivision/rivision_worker/data"
+  meta_db: ""      # Auto-filled
+  event_cache_db: ""
+  recordings_dir: ""
+  thumbnails_dir: ""
+  vectors_dir: ""
+
+# Data retention and cleanup
+cleanup:
+  detection_retain_days: 7
+  recording_retain_days: 30
+  thumbnail_retain_days: 7
+  disk_high_watermark_pct: 85
+  disk_critical_watermark_pct: 95
+  cleanup_interval_sec: 3600
+
+# Logging
+log:
+  level: "info"  # trace | debug | info | warn | error
+  file: "/opt/rivision/rivision_worker/logs/worker.log"
+  max_size_mb: 100
+  max_files: 5
+  console: true

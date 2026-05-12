@@ -1,0 +1,51 @@
+# VLM Inference Configuration
+# Version: 1.0
+
+# Server settings
+server:
+  enabled: false
+  port: 8090
+  host: "127.0.0.1"
+
+# Model settings (riscv64 / K3 SpaceMIT NPU)
+model:
+  # 模型基础目录 (相对于安装目录)
+  base_dir: "models/vlm"
+
+  name: "fastvlm-mm-0.5b-q4_1"
+  model_file: "fastvlm-mm-0.5b-q4_1/fastvlm-text-0.5B-Q4_1.gguf"
+  vision_file: "fastvlm-mm-0.5b-q4_1/fastvlm_vision.f16.onnx"
+  mode: "smt"  # SpaceMIT NPU 加速
+
+# Inference parameters
+inference:
+  max_tokens: 256
+  temperature: 0.7
+  top_p: 0.9
+  context_size: 2048
+  timeout_ms: 10000
+
+# Performance tuning
+performance:
+  # K3 平台: 6-8 线程最优
+  threads: 6
+  batch_size: 1
+  
+  # KV Cache 优化 (减少内存带宽)
+  cache_type_k: "q8_0"
+  cache_type_v: "q8_0"
+  
+  # 内存管理
+  mmap: true
+  mlock: false  # K3 内存有限
+
+# Default prompts
+prompts:
+  describe: "简要描述图片内容"
+  analyze: "请详细分析这张照片，包括场景、人物、行为和背景"
+  verify: "判断图片中是否存在异常行为"
+
+# Logging
+log:
+  level: "info"
+  file: ""  # Auto-filled from storage.data_dir

@@ -1,0 +1,96 @@
+# Pipeline Configuration - P1 Optimizations
+# RiVision Worker v1.0
+
+# Frame Pool Configuration
+frame_pool:
+  # Number of pre-allocated frames
+  capacity: 32
+  
+  # Frame dimensions (should match decoder output)
+  width: 1920
+  height: 1080
+  
+  # Pixel format: nv12, rgb24, bgr24, rgba32
+  format: nv12
+  
+  # Use DMA-BUF for zero-copy (K3 VPU → NPU)
+  use_dma_buf: true
+  
+  # Use cached memory mapping for CPU access
+  cache_coherent: true
+
+# Batch Inference Configuration (K3 NPU)
+batch_inference:
+  # Enable batch inference
+  enabled: true
+  
+  # Batch size (optimal for K3 NPU: 2)
+  batch_size: 2
+  
+  # Max wait time before processing partial batch (ms)
+  max_wait_ms: 5
+  
+  # Model input dimensions
+  input_width: 640
+  input_height: 640
+  
+  # Detection thresholds
+  conf_threshold: 0.5
+  nms_threshold: 0.45
+  
+  # Number of classes (COCO: 80)
+  num_classes: 80
+  
+  # Number of CPU threads for pre/post processing
+  num_threads: 4
+
+# Async Pipeline Configuration
+async_pipeline:
+  # Enable async decoding
+  async_decode: true
+  
+  # Decoder output queue size
+  decode_queue_size: 4
+  
+  # Enable async inference
+  async_inference: true
+  
+  # Inference output queue size
+  inference_queue_size: 4
+  
+  # Enable async encoding
+  async_encode: true
+  
+  # Encoder input queue size
+  encode_queue_size: 4
+
+# Performance Tuning
+performance:
+  # Target FPS per stream (0 = max)
+  target_fps: 0
+  
+  # Skip frames if pipeline backs up
+  drop_frames_on_backpressure: true
+  
+  # Max frames to buffer before dropping
+  max_buffered_frames: 8
+  
+  # NPU timeout (ms)
+  npu_timeout_ms: 100
+  
+  # VPU timeout (ms)
+  vpu_timeout_ms: 50
+
+# Monitoring
+monitoring:
+  # Enable pipeline statistics
+  enable_stats: true
+  
+  # Stats reporting interval (seconds)
+  stats_interval_s: 10
+  
+  # Log performance warnings
+  log_performance_warnings: true
+  
+  # Warn if latency exceeds (ms)
+  latency_warning_threshold_ms: 50
