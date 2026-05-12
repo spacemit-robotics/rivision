@@ -1,0 +1,51 @@
+# RiVision VLM Server - 视觉语言模型推理服务
+# 使用 llama.cpp llama-server 提供 OpenAI 兼容 API
+#
+# 安装: sudo cp rivision-vlm.service /etc/systemd/system/
+# 启用: sudo systemctl daemon-reload && sudo systemctl enable --now rivision-vlm
+
+[Unit]
+Description=RiVision VLM Inference Server (llama-server)
+After=network.target
+
+[Service]
+Type=simple
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_infer
+
+# 环境变量
+Environment=LLAMA_LOG_LEVEL=info
+Environment=LD_LIBRARY_PATH=/opt/rivision/rivision_infer/lib
+
+# llama-server 启动命令
+# --host: 监听地址 (127.0.0.1 仅本地)
+# --port: 监听端口 9084
+# --model: GGUF 模型路径
+# --mmproj: 多模态投影模型
+# --ctx-size: 上下文长度
+# --threads: CPU 线程数
+# --batch-size: 批处理大小
+# 模型路径可通过 EnvironmentFile 覆盖
+Environment=VLM_MODEL=/opt/rivision/rivision_infer/models/vlm/fastvlm-0.5b-q8/fastvlm-0.5b-q8_0.gguf
+Environment=VLM_MMPROJ=/opt/rivision/rivision_infer/models/vlm/fastvlm-0.5b-q8/fastvlm-0.5b-mmproj-f16.gguf
+EnvironmentFile=-/opt/rivision/rivision_infer/config/.env
+
+ExecStart=/opt/rivision/rivision_infer/bin/llama-server \
+    --host 127.0.0.1 \
+    --port ${VLM_PORT:-9084} \
+    --model ${VLM_MODEL} \
+    --mmproj ${VLM_MMPROJ} \
+    --ctx-size 2048 \
+    --threads 6 \
+    --batch-size 1
+
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+# 内存限制 (K3: 8GB, 预留给 VLM 4GB)
+MemoryMax=4G
+
+[Install]
+WantedBy=multi-user.target

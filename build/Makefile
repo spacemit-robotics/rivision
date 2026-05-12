@@ -1,6 +1,9 @@
 # ============================================================
 # RiVision K3 Deploy - Top-level Build System
-# 统一构建组件: rivision_cli, rivision_gateway, rivision_embed, rivision_owl, rivision_node
+# 统一构建组件:
+#   rivision_cli, rivision_gateway, rivision_embed, rivision_owl, rivision_node
+#   rivision_hub, rivision_worker (C++ with built-in inference), rivision_app_web
+# 平台: 仅 RISC-V K3 (SpacemiT), K3 设备上原生编译
 # ============================================================
 
 # 默认目标: release (K3 RISC-V)
@@ -37,6 +40,12 @@ GO_MIN_VERSION := 1.25.0
 export GOPROXY := https://goproxy.cn,https://proxy.golang.org,direct
 export GONOSUMDB := *
 
+# === Server LDFLAGS (hub / worker) ===
+SERVER_LDFLAGS := -s -w \
+	-X main.version=$(VERSION) \
+	-X main.gitCommit=$(GIT_COMMIT) \
+	-X main.buildTime=$(TIMESTAMP)
+
 # === .PHONY 声明 (集中管理) ===
 .PHONY: help clean check-env check-go
 .PHONY: release
@@ -46,86 +55,71 @@ export GONOSUMDB := *
 .PHONY: node node-llama node-yolo
 .PHONY: yolo-server
 .PHONY: owl owl-sim owl-gb28181-sim owl-onvif-sim owl-web check-zlm zlm
+.PHONY: hub worker
+.PHONY: release-server-host release-server-node
 
 # ============================================================
 # 环境预检 (check-env)
-# 检查构建和运行所需的全部依赖
+#
+# 设计原则：
+#   - Hub 侧依赖（Go / Node / npm / libsqlite3-dev）→ 此处检查
+#   - Worker 侧依赖（OpenCV / ORT / llama / FFmpeg dev / yaml-cpp / curl / SpacemiT MPP）
+#     → 完全交给 src/rivision_worker/CMakeLists.txt 在 configure 阶段统一检查
+#   - 多节点 fleet 检查 → 不集成，需要时直接 ssh <node> 跑 cmake 即可
 # ============================================================
 check-env:
-	@echo "🔍 检查构建环境..."
-	@echo ""
+	@echo "🔍 Hub 侧构建环境检查（worker 侧由 CMake 自检）..."
 	@ERRORS=0; \
-	echo "  --- 构建工具 ---"; \
-	command -v go >/dev/null 2>&1 && { \
-		GO_VER=$$(go version | grep -oP 'go\K[0-9]+\.[0-9]+(\.[0-9]+)?'); \
+	echo ""; \
+	echo "  --- 工具链（hub Go + app_web Node）---"; \
+	if command -v go >/dev/null 2>&1; then \
+		GO_VER=$$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/^go//' | head -1); \
 		REQ="$(GO_MIN_VERSION)"; \
-		if [ "$$(printf '%s\n' "$$REQ" "$$GO_VER" | sort -V | head -1)" != "$$REQ" ]; then \
-			echo "  ❌ Go 版本过低: $$GO_VER (需要 >= $$REQ)"; \
-			echo "     升级: https://mirrors.aliyun.com/golang/"; \
+		if [ -z "$$GO_VER" ]; then \
+			echo "  ❌ Go 安装异常（go version 输出无法解析）"; \
+			ERRORS=$$((ERRORS+1)); \
+		elif [ "$$(printf '%s\n%s\n' "$$REQ" "$$GO_VER" | sort -V | head -1)" != "$$REQ" ]; then \
+			echo "  ❌ Go $$GO_VER 过低，需要 >= $$REQ"; \
+			echo "     wget https://mirrors.aliyun.com/golang/go$$REQ.linux-riscv64.tar.gz"; \
+			echo "     sudo tar -C /usr/local -xzf go$$REQ.linux-riscv64.tar.gz"; \
 			ERRORS=$$((ERRORS+1)); \
 		else \
-			echo "  ✅ Go $$GO_VER (>= $$REQ)"; \
+			echo "  ✅ Go $$GO_VER"; \
 		fi; \
-	} || { echo "  ❌ Go 未安装 — https://mirrors.aliyun.com/golang/"; ERRORS=$$((ERRORS+1)); }; \
-	command -v cmake >/dev/null 2>&1 && { \
-		CMAKE_VER=$$(cmake --version | head -1 | grep -oP '[0-9]+\.[0-9]+\.[0-9]+'); \
-		echo "  ✅ cmake $$CMAKE_VER"; \
-	} || { echo "  ❌ cmake 未安装 (ZLMediaKit 编译需要) — sudo apt install cmake"; ERRORS=$$((ERRORS+1)); }; \
-	command -v gcc >/dev/null 2>&1 && { \
-		GCC_VER=$$(gcc -dumpversion); \
-		echo "  ✅ gcc $$GCC_VER"; \
-	} || { echo "  ❌ gcc 未安装 (ZLMediaKit/yolo-server 编译需要) — sudo apt install build-essential"; ERRORS=$$((ERRORS+1)); }; \
-	command -v node >/dev/null 2>&1 && { \
-		NODE_VER=$$(node --version); \
-		echo "  ✅ Node.js $$NODE_VER"; \
-	} || { echo "  ⚠️  Node.js 未安装 (Web 前端构建需要)"; }; \
-	echo ""; \
-	echo "  --- 运行时依赖 (必须为 SpaceMIT 定制版) ---"; \
-	if dpkg -s spacemit-onnxruntime >/dev/null 2>&1; then \
-		ORT_VER=$$(dpkg -s spacemit-onnxruntime | grep '^Version:' | awk '{print $$2}'); \
-		echo "  ✅ spacemit-onnxruntime $$ORT_VER (SpacemiT EP 硬件加速)"; \
-	elif dpkg -s libonnxruntime1.23 >/dev/null 2>&1 || ls /usr/lib/libonnxruntime.so* >/dev/null 2>&1; then \
-		echo "  ❌ 检测到上游 ONNX Runtime (无 SpacemiT 硬件加速)"; \
-		echo "     必须替换为: sudo apt install spacemit-onnxruntime"; \
-		ERRORS=$$((ERRORS+1)); \
 	else \
-		echo "  ❌ ONNX Runtime 未安装 (embed/yolo-server 运行需要)"; \
-		echo "     安装: sudo apt install spacemit-onnxruntime"; \
+		echo "  ❌ Go 未安装（hub 编译需要 >= $(GO_MIN_VERSION)）"; \
+		echo "     wget https://mirrors.aliyun.com/golang/go$(GO_MIN_VERSION).linux-riscv64.tar.gz"; \
+		echo "     sudo tar -C /usr/local -xzf go$(GO_MIN_VERSION).linux-riscv64.tar.gz"; \
 		ERRORS=$$((ERRORS+1)); \
 	fi; \
-	if dpkg -s llama.cpp-tools-spacemit >/dev/null 2>&1; then \
-		LLAMA_VER=$$(dpkg -s llama.cpp-tools-spacemit | grep '^Version:' | awk '{print $$2}'); \
-		echo "  ✅ llama.cpp-tools-spacemit $$LLAMA_VER (SpacemiT 硬件加速)"; \
-	elif dpkg -s llama.cpp-tools >/dev/null 2>&1; then \
-		LLAMA_VER=$$(dpkg -s llama.cpp-tools | grep '^Version:' | awk '{print $$2}'); \
-		echo "  ❌ 检测到上游 llama.cpp-tools $$LLAMA_VER (无 SpacemiT 硬件加速)"; \
-		echo "     必须替换为: sudo apt install llama.cpp-tools-spacemit"; \
-		ERRORS=$$((ERRORS+1)); \
-	elif command -v llama-server >/dev/null 2>&1; then \
-		echo "  ❌ 检测到手动安装的 llama-server (必须使用 spacemit 包)"; \
-		echo "     安装: sudo apt install llama.cpp-tools-spacemit"; \
-		ERRORS=$$((ERRORS+1)); \
+	if command -v node >/dev/null 2>&1; then \
+		echo "  ✅ Node.js $$(node --version)"; \
 	else \
-		echo "  ❌ llama-server 未安装 (VLM 推理节点需要)"; \
-		echo "     安装: sudo apt install llama.cpp-tools-spacemit"; \
+		echo "  ⚠️  Node.js 未安装（app_web 前端构建需要）"; \
+		echo "     sudo apt install -y nodejs npm"; \
+	fi; \
+	if dpkg -s libsqlite3-dev >/dev/null 2>&1; then \
+		echo "  ✅ libsqlite3-dev（hub CGO sqlite 必需）"; \
+	else \
+		echo "  ❌ libsqlite3-dev 未安装"; \
+		echo "     sudo apt install -y libsqlite3-dev"; \
 		ERRORS=$$((ERRORS+1)); \
 	fi; \
 	echo ""; \
 	echo "  --- 网络 ---"; \
-	echo "  GOPROXY: $${GOPROXY}"; \
 	PROXY_URL=$$(echo "$${GOPROXY}" | cut -d, -f1); \
 	if curl -sf --connect-timeout 5 "$$PROXY_URL" >/dev/null 2>&1; then \
-		echo "  ✅ Go proxy 可达 ($$PROXY_URL)"; \
+		echo "  ✅ GOPROXY 可达 ($$PROXY_URL)"; \
 	else \
-		echo "  ⚠️  Go proxy ($$PROXY_URL) 不可达，将尝试备用源"; \
+		echo "  ⚠️  GOPROXY ($$PROXY_URL) 不可达，会尝试备用源"; \
 	fi; \
 	echo ""; \
 	if [ $$ERRORS -gt 0 ]; then \
-		echo "  ❌ 发现 $$ERRORS 个必要依赖缺失，请先安装后再构建"; \
-		echo "     运行 ./scripts/setup-env.sh 可自动安装"; \
+		echo "  ❌ Hub 侧发现 $$ERRORS 个缺失项，请先按上述提示修复"; \
+		echo ""; \
 		exit 1; \
 	fi; \
-	echo "  ✅ 环境检查通过"
+	echo "  ✅ Hub 侧检查通过（worker 依赖将在 cmake 配置时校验）"
 	@echo ""
 
 # 兼容旧目标名
@@ -398,24 +392,374 @@ zlm:
 	cd $(SRC_DIR)/rivision_owl && make zlm
 
 # ============================================================
+# 单组件构建: Hub (Go, K3 native)
+# ============================================================
+
+hub: check-env
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║  📦 Building rivision_hub                                     ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@echo "  Version:  $(VERSION)"
+	@echo "  Platform: riscv64 (K3 native)"
+	@echo "  Output:   $(CURDIR)/dist/rivision_hub"
+	@echo ""
+	@COMP_DIR=$(CURDIR)/dist/rivision_hub; \
+	mkdir -p $$COMP_DIR/bin $$COMP_DIR/config $$COMP_DIR/web $$COMP_DIR/services $$COMP_DIR/logs; \
+	echo "[1/4] Building Web UI (rivision_app_web)..."; \
+	if [ -d "$(SRC_DIR)/rivision_app_web" ] && command -v npm >/dev/null 2>&1; then \
+		cd $(SRC_DIR)/rivision_app_web && npm install --silent && npm run build && \
+		cp -r dist/* $$COMP_DIR/web/ 2>/dev/null || true; \
+	elif [ -d "$(SRC_DIR)/rivision_hub/web" ]; then \
+		cp -r $(SRC_DIR)/rivision_hub/web/* $$COMP_DIR/web/ 2>/dev/null || true; \
+	else \
+		echo "  ⚠️  Web UI 跳过 (未找到 rivision_app_web 或 npm)"; \
+	fi; \
+	echo "[2/4] Building Go binary..."; \
+	cd $(SRC_DIR)/rivision_hub && \
+		go build -ldflags "$(SERVER_LDFLAGS)" -o $$COMP_DIR/bin/rivision-hub ./cmd/hub; \
+	echo "[3/4] Copying config and services..."; \
+	cp $(SRC_DIR)/rivision_hub/config/hub.yaml $$COMP_DIR/config/ 2>/dev/null || true; \
+	cp $(CURDIR)/templates/rivision-hub.service $$COMP_DIR/services/ 2>/dev/null || true; \
+	echo "[4/4] Generating install/uninstall scripts..."; \
+	cp $(CURDIR)/templates/component-install.sh $$COMP_DIR/install.sh 2>/dev/null || true; \
+	cp $(CURDIR)/templates/uninstall.sh $$COMP_DIR/ 2>/dev/null || true; \
+	chmod +x $$COMP_DIR/*.sh 2>/dev/null || true; \
+	echo ""; \
+	echo "  ✅ rivision_hub build complete"; \
+	echo "  Output: $$COMP_DIR  Size: $$(du -sh $$COMP_DIR | cut -f1)"; \
+	echo ""
+
+# ============================================================
+# 单组件构建: Worker (C++, K3 native, built-in YOLO+VLM)
+# ============================================================
+
+worker:
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║  📦 Building rivision_worker (C++)                            ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@echo "  Version:  $(VERSION)"
+	@echo "  Platform: riscv64 (K3 native, SpacemiT MPP)"
+	@echo "  Output:   $(CURDIR)/dist/rivision_worker"
+	@echo ""
+	@COMP_DIR=$(CURDIR)/dist/rivision_worker; \
+	mkdir -p $$COMP_DIR/bin $$COMP_DIR/config $$COMP_DIR/services $$COMP_DIR/lib $$COMP_DIR/models; \
+	echo "[1/4] Building C++ binary..."; \
+	cd $(SRC_DIR)/rivision_worker && \
+		mkdir -p build && cd build && \
+		cmake .. -DCMAKE_BUILD_TYPE=Release && \
+		make -j$$(nproc); \
+	cp $(SRC_DIR)/rivision_worker/build/rivision-worker $$COMP_DIR/bin/; \
+	echo "[2/4] Copying config and services..."; \
+	cp $(SRC_DIR)/rivision_worker/config/*.yaml $$COMP_DIR/config/ 2>/dev/null || true; \
+	cp $(CURDIR)/templates/rivision-worker.service $$COMP_DIR/services/ 2>/dev/null || true; \
+	echo "[3/4] Generating install/uninstall scripts..."; \
+	cp $(CURDIR)/templates/component-install.sh $$COMP_DIR/install.sh 2>/dev/null || true; \
+	cp $(CURDIR)/templates/uninstall.sh $$COMP_DIR/ 2>/dev/null || true; \
+	chmod +x $$COMP_DIR/*.sh 2>/dev/null || true; \
+	echo "[4/4] Done."; \
+	echo ""; \
+	echo "  ✅ rivision_worker build complete"; \
+	echo "  Output: $$COMP_DIR  Size: $$(du -sh $$COMP_DIR | cut -f1)"; \
+	echo ""
+
+# ============================================================
+# Server 产品级打包: Host 端 (hub + gateway + owl + app_web)
+# 输出: dist/<VERSION>/riscv64/server-host/
+# ============================================================
+
+release-server-host: check-env
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║  🚀 Server Host: hub + gateway + owl + app_web                ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@echo "  Version:  $(VERSION)"
+	@echo "  Platform: riscv64 (K3 native)"
+	@echo ""
+	@DIST_BASE=$(CURDIR)/../dist/$(VERSION)/riscv64 && \
+	SVR_DIR=$$DIST_BASE/server-host && \
+	mkdir -p $$SVR_DIR/bin $$SVR_DIR/web $$SVR_DIR/config $$SVR_DIR/services $$SVR_DIR/owl/bin $$SVR_DIR/owl/config && \
+	echo "[1/4] Building rivision_hub (含 rivision_app_web)..." && \
+	if [ -d "$(SRC_DIR)/rivision_app_web" ] && command -v npm >/dev/null 2>&1; then \
+		cd $(SRC_DIR)/rivision_app_web && npm install --silent && npm run build && \
+		cp -r dist/* $$SVR_DIR/web/ 2>/dev/null || true && \
+		echo "      ✅ rivision_app_web 构建完成"; \
+	fi && \
+	cd $(SRC_DIR)/rivision_hub && \
+		go build -ldflags "$(SERVER_LDFLAGS)" -o $$SVR_DIR/bin/rivision-hub ./cmd/hub && \
+	echo "      ✅ rivision-hub 构建完成" && \
+	echo "[2/4] Building rivision_gateway..." && \
+	cd $(SRC_DIR)/rivision_gateway/inference-gateway-go && make build-riscv64 VERSION=$(VERSION) --no-print-directory && \
+	cp build/rivision_gateway $$SVR_DIR/bin/ && \
+	echo "      ✅ rivision_gateway 构建完成" && \
+	echo "[3/4] Building rivision_owl (Hub OWL for SIP-media split)..." && \
+	cd $(SRC_DIR)/rivision_owl && make owl-quiet DIST_DIR=$$SVR_DIR/owl --no-print-directory 2>/dev/null && \
+	echo "      ✅ rivision-owl 构建完成" && \
+	rm -f $$SVR_DIR/owl/config/config.toml $$SVR_DIR/owl/config/.env $$SVR_DIR/owl/config/gb28181-sim.yaml 2>/dev/null || true && \
+	rm -f $$SVR_DIR/owl/bin/gb28181-sim 2>/dev/null || true && \
+	rm -rf $$SVR_DIR/owl/services $$SVR_DIR/owl/mp4path 2>/dev/null || true && \
+	rmdir $$SVR_DIR/owl/data $$SVR_DIR/owl/logs 2>/dev/null || true && \
+	echo "[4/4] Finalizing server-host package..." && \
+	cp $(SRC_DIR)/rivision_hub/config/hub.yaml $$SVR_DIR/config/ 2>/dev/null || true && \
+	cp $(CURDIR)/templates/rivision-hub.service $(CURDIR)/templates/rivision-gateway.service $(CURDIR)/templates/rivision-owl.service $$SVR_DIR/services/ 2>/dev/null || true && \
+	cp $(CURDIR)/templates/.env.server.template $$SVR_DIR/config/ 2>/dev/null || true && \
+	$(CURDIR)/scripts/generate_manifest.sh $$SVR_DIR $(VERSION) riscv64 $(GIT_COMMIT) 2>/dev/null || true && \
+	$(CURDIR)/scripts/checksum.sh $$SVR_DIR 2>/dev/null || true && \
+	cp $(CURDIR)/templates/install-server-host.sh $$SVR_DIR/install.sh && \
+	cp $(CURDIR)/templates/uninstall.sh $$SVR_DIR/ 2>/dev/null || true && \
+	chmod +x $$SVR_DIR/install.sh $$SVR_DIR/uninstall.sh 2>/dev/null || true && \
+	ln -sfn $(VERSION) $(CURDIR)/../dist/latest 2>/dev/null || true && \
+	echo "" && \
+	echo "  ✅ Server Host Complete"
+
+# ============================================================
+# Server 产品级打包: Node 端 (worker + embed + go2rtc + owl)
+# 输出: dist/<VERSION>/riscv64/server-node/
+# 注: C++ Worker 已内置 YOLO+VLM 推理
+#     OWL+ZLM 在 worker_owl 模式下需要 (GB28181 同子网场景)
+# ============================================================
+
+release-server-node: check-env
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════════════════╗"
+	@echo "║  🚀 Server Node: worker + embed + go2rtc + owl                ║"
+	@echo "╚══════════════════════════════════════════════════════════════╝"
+	@echo "  Version:  $(VERSION)"
+	@echo "  Platform: riscv64 (K3 native)"
+	@echo "  Note:     C++ Worker has built-in YOLO+VLM inference"
+	@echo ""
+	@DIST_BASE=$(CURDIR)/../dist/$(VERSION)/riscv64 && \
+	NODE_DIR=$$DIST_BASE/server-node && \
+	mkdir -p $$NODE_DIR/bin $$NODE_DIR/config $$NODE_DIR/services $$NODE_DIR/lib \
+	         $$NODE_DIR/models/embed $$NODE_DIR/models/yolo $$NODE_DIR/models/vlm && \
+	echo "[1/4] Building rivision_worker (C++ with built-in inference)..." && \
+	cd $(SRC_DIR)/rivision_worker && \
+		mkdir -p build && cd build && \
+		cmake .. -DCMAKE_BUILD_TYPE=Release && \
+		make -j$$(nproc) && \
+	cp $(SRC_DIR)/rivision_worker/build/rivision-worker $$NODE_DIR/bin/ && \
+	echo "      ✅ rivision-worker (C++) 构建完成" && \
+	echo "[2/4] Building rivision_embed..." && \
+	cd $(SRC_DIR)/rivision_embed && make build-riscv64 VERSION=$(VERSION) --no-print-directory && \
+	cp build/rivision-embed-server-linux-riscv64 $$NODE_DIR/bin/rivision-embed-server && \
+	echo "      ✅ rivision-embed 构建完成" && \
+	echo "  [+] Copying models (yolo / embed / vlm)..." && \
+	mkdir -p $$NODE_DIR/models/yolo/yolo11/detection \
+	         $$NODE_DIR/models/yolo/yolov8/pose \
+	         $$NODE_DIR/models/yolo/yolov8/segment \
+	         $$NODE_DIR/models/yolo/yolov5/face && \
+	cp $(SRC_DIR)/rivision_worker/models/yolo/yolo11/detection/910byolo11n_b2.q.onnx $$NODE_DIR/models/yolo/yolo11/detection/ 2>/dev/null || true && \
+	cp $(SRC_DIR)/rivision_worker/models/yolo/yolov8/pose/*.onnx $$NODE_DIR/models/yolo/yolov8/pose/ 2>/dev/null || true && \
+	cp $(SRC_DIR)/rivision_worker/models/yolo/yolov8/segment/*.onnx $$NODE_DIR/models/yolo/yolov8/segment/ 2>/dev/null || true && \
+	cp $(SRC_DIR)/rivision_worker/models/yolo/yolov5/face/*.onnx $$NODE_DIR/models/yolo/yolov5/face/ 2>/dev/null || true && \
+	cp $(SRC_DIR)/rivision_worker/models/embed/*.onnx $$NODE_DIR/models/embed/ 2>/dev/null || true && \
+	if [ -d "$(SRC_DIR)/rivision_worker/models/vlm/fastvlm-mm-0.5b-q4_1" ]; then \
+		cp -r $(SRC_DIR)/rivision_worker/models/vlm/fastvlm-mm-0.5b-q4_1 $$NODE_DIR/models/vlm/; \
+	fi && \
+	echo "[3/4] Finalizing server-node package..." && \
+	cp $(SRC_DIR)/rivision_worker/config/*.yaml $$NODE_DIR/config/ 2>/dev/null || true && \
+	cp $(CURDIR)/templates/rivision-worker.service $(CURDIR)/templates/rivision-embed.service $(CURDIR)/templates/rivision-go2rtc.service $(CURDIR)/templates/rivision-vlm.service $$NODE_DIR/services/ 2>/dev/null || true && \
+	cp $(CURDIR)/templates/.env.server-node.template $$NODE_DIR/config/ 2>/dev/null || true && \
+	echo "  [+] Bundling OWL+ZLM (必选组件)..." && \
+	if [ ! -d "$(CURDIR)/dist/rivision_owl/bin" ]; then \
+		echo ""; \
+		echo "  ❌ 错误: OWL 组件未找到"; \
+		echo "  OWL 是必选组件，请先构建: make owl"; \
+		echo ""; \
+		exit 1; \
+	fi && \
+	mkdir -p $$NODE_DIR/owl/bin $$NODE_DIR/owl/config && \
+	cp $(CURDIR)/dist/rivision_owl/bin/owl $$NODE_DIR/owl/bin/ && \
+	cp $(CURDIR)/dist/rivision_owl/bin/ZLMediaKit $$NODE_DIR/owl/bin/ && \
+	cp $(CURDIR)/dist/rivision_owl/config/owl.toml.template $$NODE_DIR/owl/config/ && \
+	if [ -d "$(CURDIR)/dist/rivision_owl/www" ]; then cp -r $(CURDIR)/dist/rivision_owl/www $$NODE_DIR/owl/; fi && \
+	cp $(CURDIR)/templates/rivision-owl.service $$NODE_DIR/services/ && \
+	echo "      ✅ OWL+ZLM bundled" && \
+	echo "[4/4] Generating install/manifest..." && \
+	$(CURDIR)/scripts/generate_manifest.sh $$NODE_DIR $(VERSION) riscv64 $(GIT_COMMIT) 2>/dev/null || true && \
+	$(CURDIR)/scripts/checksum.sh $$NODE_DIR 2>/dev/null || true && \
+	cp $(CURDIR)/templates/install-server-node.sh $$NODE_DIR/install.sh && \
+	cp $(CURDIR)/templates/uninstall.sh $$NODE_DIR/ 2>/dev/null || true && \
+	chmod +x $$NODE_DIR/install.sh $$NODE_DIR/uninstall.sh 2>/dev/null || true && \
+	echo "" && \
+	echo "  ✅ Server Node Complete" && \
+	echo "  组件: worker (C++, built-in YOLO+VLM) + embed + owl" && \
+	echo "  输出: $$NODE_DIR  ($$(du -sh $$NODE_DIR | cut -f1))" && \
+	echo "  部署: scp -r server-node/ k3:/tmp/ && cd /tmp/server-node && ./install.sh" && \
+	echo ""
+
+# ============================================================
 # 工具目标
 # ============================================================
 
 clean:
 	@echo "Cleaning all build artifacts..."
-	@echo "  [1/6] rivision_cli..."
+	@echo "  [1/8] rivision_cli..."
 	@cd $(SRC_DIR)/rivision_cli && make clean 2>/dev/null || true
-	@echo "  [2/6] rivision_embed..."
+	@echo "  [2/8] rivision_embed..."
 	@cd $(SRC_DIR)/rivision_embed && make clean 2>/dev/null || true
-	@echo "  [3/6] rivision_gateway..."
+	@echo "  [3/8] rivision_gateway..."
 	@cd $(SRC_DIR)/rivision_gateway/inference-gateway-go && make clean 2>/dev/null || true
-	@echo "  [4/6] rivision_node..."
+	@echo "  [4/8] rivision_node..."
 	@cd $(SRC_DIR)/rivision_node && make clean 2>/dev/null || true
-	@echo "  [5/6] rivision_owl..."
+	@echo "  [5/8] rivision_owl..."
 	@cd $(SRC_DIR)/rivision_owl && make clean 2>/dev/null || true
-	@echo "  [6/6] dist/..."
+	@echo "  [6/8] rivision_hub..."
+	@rm -rf $(SRC_DIR)/rivision_hub/bin 2>/dev/null || true
+	@echo "  [7/8] rivision_worker..."
+	@rm -rf $(SRC_DIR)/rivision_worker/build 2>/dev/null || true
+	@echo "  [8/8] dist/..."
 	@rm -rf dist/*
 	@echo "  ✅ 清理完成"
+
+# ============================================================
+# 多节点远程编排 (deploy fleet)
+#
+# 节点列表格式: <user@host>:<role>
+#   role = hub | worker
+# 默认 fleet（可用 REMOTE_NODES=... 覆盖）：
+REMOTE_NODES ?= \
+    node@nodehost:hub \
+    node@node3:worker \
+    bianbu@node4:worker \
+    bianbu@node5:worker \
+    bianbu@node6:worker
+
+REMOTE_REPO   ?= $(shell git config --get remote.origin.url 2>/dev/null)
+REMOTE_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
+REMOTE_DIR    ?= ~/rivision
+REMOTE_LOG    := $(CURDIR)/remote-logs
+
+# Sudo 密码注入（install.sh 需要 root）
+#   方式 A: SUDO_PASS=xxx make remote-install     (所有节点同一密码)
+#   方式 B: 每节点环境变量 SUDO_PASS_node_AT_host  (推荐，名称中 @→_AT_)
+SUDO_PASS ?=
+
+.PHONY: remote-clone remote-build remote-install remote-test remote-all remote-status
+
+# ─── remote-clone: 5 节点并行 git clone/pull ─────────────────────
+remote-clone:
+	@mkdir -p $(REMOTE_LOG)
+	@echo "═══ Cloning/Pulling on $(words $(REMOTE_NODES)) nodes ═══"
+	@echo "  Repo:   $(REMOTE_REPO)"
+	@echo "  Branch: $(REMOTE_BRANCH)"
+	@echo "  Dir:    $(REMOTE_DIR)"
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; \
+		log=$(REMOTE_LOG)/clone__$$(echo $$h | tr '@' '_').log; \
+		( \
+			echo "─── $$h ───"; \
+			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "set -e; \
+				if [ -d $(REMOTE_DIR)/.git ]; then \
+					cd $(REMOTE_DIR) && git fetch origin && git checkout $(REMOTE_BRANCH) && git reset --hard origin/$(REMOTE_BRANCH); \
+				else \
+					git clone -b $(REMOTE_BRANCH) $(REMOTE_REPO) $(REMOTE_DIR); \
+				fi 2>&1 | tail -6"; \
+		) > $$log 2>&1 & \
+	done; wait
+	@echo ""
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; log=$(REMOTE_LOG)/clone__$$(echo $$h | tr '@' '_').log; \
+		if grep -qE "HEAD is now at|already up to date|Cloning into" $$log; then \
+			echo "  ✅ $$h"; \
+		else \
+			echo "  ❌ $$h (see $$log)"; tail -3 $$log | sed 's/^/      /'; \
+		fi; \
+	done
+
+# ─── remote-build: 5 节点并行编译（hub 跑 release-server-host, worker 跑 release-server-node）
+remote-build:
+	@mkdir -p $(REMOTE_LOG)
+	@echo "═══ Building on $(words $(REMOTE_NODES)) nodes (并行) ═══"
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; role=$${n##*:}; \
+		log=$(REMOTE_LOG)/build__$$(echo $$h | tr '@' '_').log; \
+		if [ "$$role" = "hub" ]; then tgt="release-server-host"; else tgt="release-server-node"; fi; \
+		( \
+			echo "─── $$h (role=$$role, target=$$tgt) ───"; \
+			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "cd $(REMOTE_DIR) && export GOPROXY=https://goproxy.cn,direct && make -C build $$tgt 2>&1 | tail -40"; \
+		) > $$log 2>&1 & \
+	done; wait
+	@echo ""
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; log=$(REMOTE_LOG)/build__$$(echo $$h | tr '@' '_').log; \
+		if grep -qE "Complete|Built target|Build complete" $$log; then \
+			echo "  ✅ $$h"; \
+		else \
+			echo "  ❌ $$h (see $$log)"; tail -5 $$log | sed 's/^/      /'; \
+		fi; \
+	done
+
+# ─── remote-install: 5 节点跑 install.sh (需要 sudo) ───────────────
+# 用法: SUDO_PASS=node123 make remote-install NODES="node@nodehost:hub"
+#       或: SUDO_PASS_bianbu_AT_node4=bianbu make remote-install
+remote-install:
+	@mkdir -p $(REMOTE_LOG)
+	@echo "═══ Running install.sh on $(words $(REMOTE_NODES)) nodes ═══"
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; role=$${n##*:}; \
+		log=$(REMOTE_LOG)/install__$$(echo $$h | tr '@' '_').log; \
+		if [ "$$role" = "hub" ]; then pkg="server-host"; else pkg="server-node"; fi; \
+		pass_var=SUDO_PASS_$$(echo $$h | tr '@.-' '___' | tr '[:lower:]' '[:upper:]'); \
+		pass=$$(eval echo \$${$$pass_var:-$(SUDO_PASS)}); \
+		if [ -z "$$pass" ]; then \
+			echo "  ⚠️  $$h: 未设置密码 (export $$pass_var=... 或 SUDO_PASS=...)，跳过"; \
+			continue; \
+		fi; \
+		( \
+			echo "─── $$h (pkg=$$pkg) ───"; \
+			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "set -e; \
+				PKG_DIR=\$$(ls -d $(REMOTE_DIR)/dist/*/riscv64/$$pkg 2>/dev/null | head -1); \
+				if [ -z \"\$$PKG_DIR\" ]; then echo '❌ 未找到 dist/.../$$pkg/，请先 remote-build'; exit 1; fi; \
+				echo '$$pass' | sudo -S -v && cd \"\$$PKG_DIR\" && sudo ./install.sh 2>&1 | tail -20"; \
+		) > $$log 2>&1 & \
+	done; wait
+	@echo ""
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; log=$(REMOTE_LOG)/install__$$(echo $$h | tr '@' '_').log; \
+		if [ -f $$log ]; then \
+			if grep -qE "Installation complete|安装完成|✓ installed" $$log; then \
+				echo "  ✅ $$h"; \
+			else \
+				echo "  ❌ $$h"; tail -3 $$log | sed 's/^/      /'; \
+			fi; \
+		fi; \
+	done
+
+# ─── remote-test: 5 节点 smoke test 已安装的二进制 ─────────────────
+remote-test:
+	@mkdir -p $(REMOTE_LOG)
+	@echo "═══ Smoke test on $(words $(REMOTE_NODES)) nodes ═══"
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; role=$${n##*:}; \
+		log=$(REMOTE_LOG)/test__$$(echo $$h | tr '@' '_').log; \
+		if [ "$$role" = "hub" ]; then bin="/opt/rivision/rivision_hub/bin/rivision-hub"; \
+		else bin="/opt/rivision/rivision_worker/bin/rivision-worker"; fi; \
+		( \
+			echo "─── $$h (bin=$$bin) ───"; \
+			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "if [ -x $$bin ]; then \
+				file $$bin && $$bin --version 2>&1 | head -5 || $$bin --help 2>&1 | head -5; \
+			else echo '❌ 二进制不存在: $$bin'; fi"; \
+		) > $$log 2>&1 & \
+	done; wait
+	@echo ""
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; log=$(REMOTE_LOG)/test__$$(echo $$h | tr '@' '_').log; \
+		if grep -q "ELF.*RISC-V" $$log; then echo "  ✅ $$h"; tail -4 $$log | sed 's/^/      /'; \
+		else echo "  ❌ $$h"; tail -3 $$log | sed 's/^/      /'; fi; \
+	done
+
+# ─── remote-all: 串行执行 clone → build → install → test ─────────
+remote-all: remote-clone remote-build remote-install remote-test
+
+# ─── remote-status: 仅看每节点是否有可用 dist 包 ───────────────────
+remote-status:
+	@for n in $(REMOTE_NODES); do \
+		h=$${n%:*}; role=$${n##*:}; \
+		if [ "$$role" = "hub" ]; then pkg="server-host"; else pkg="server-node"; fi; \
+		ssh -n -o BatchMode=yes -o ConnectTimeout=5 $$h "ls -d $(REMOTE_DIR)/dist/*/riscv64/$$pkg 2>/dev/null && echo OK $$h $$pkg || echo MISS $$h $$pkg" 2>/dev/null | tail -1 | sed 's/^/  /'; \
+	done
 
 help:
 	@echo "============================================================"
@@ -443,6 +787,21 @@ help:
 	@echo "  node                               - rivision_node (完整: yolo+llama)"
 	@echo "  node-llama                         - rivision_node (仅 llama)"
 	@echo "  node-yolo                          - rivision_node (仅 yolo)"
+	@echo "  hub                                - rivision_hub (Go + Web UI)"
+	@echo "  worker                             - rivision_worker (C++, 内置 YOLO+VLM)"
+	@echo ""
+	@echo "Server 产品级打包 (输出到 dist/<VERSION>/riscv64/):"
+	@echo "  release-server-host                - server-host (hub + gateway + owl + app_web)"
+	@echo "  release-server-node                - server-node (worker + embed + go2rtc + owl)"
+	@echo ""
+	@echo "多节点远程编排 (5 K3 fleet):"
+	@echo "  remote-clone                       - 所有节点 git clone/pull (并行)"
+	@echo "  remote-build                       - 所有节点编译对应 release-server-* (并行)"
+	@echo "  remote-install                     - 所有节点跑 install.sh (需要 SUDO_PASS)"
+	@echo "  remote-test                        - 所有节点 smoke test 已装二进制"
+	@echo "  remote-all                         - clone → build → install → test"
+	@echo "  remote-status                      - 仅查看每节点 dist 包状态"
+	@echo "  变量: REMOTE_NODES, REMOTE_REPO, REMOTE_BRANCH, REMOTE_DIR, SUDO_PASS"
 	@echo ""
 	@echo "CLI 相关:"
 	@echo "  cli-web                            - 增量构建 Web 前端"

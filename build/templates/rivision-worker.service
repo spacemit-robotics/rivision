@@ -1,0 +1,28 @@
+[Unit]
+Description=RiVision Worker - Edge Computing Node
+After=network.target rivision-embed.service rivision-go2rtc.service
+Wants=rivision-embed.service rivision-go2rtc.service
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_worker
+
+# C++ worker 使用 config/worker.yaml，不需要 .env
+ExecStart=/opt/rivision/rivision_worker/bin/rivision-worker
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=5
+
+LimitNOFILE=65535
+LimitNPROC=65535
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-worker
+
+[Install]
+WantedBy=multi-user.target

@@ -156,7 +156,7 @@ uninstall_host() {
     done
 
     # 删除 rivision-cli 运行时提取的二进制
-    for bin in go2rtc-riscv64 go2rtc-amd64 rtsp_server-riscv64 rtsp_server-amd64; do
+    for bin in go2rtc-riscv64 rtsp_server-riscv64; do
         if [ -f "$INSTALL_DIR/bin/$bin" ]; then
             rm -f "$INSTALL_DIR/bin/$bin"
             echo "  已删除: bin/$bin (运行时提取)"

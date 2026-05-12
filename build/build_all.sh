@@ -1,50 +1,31 @@
 #!/bin/bash
-# build_all.sh — 通用构建驱动
+# build_all.sh — 通用构建驱动 (K3 RISC-V 原生编译)
 # 读取 components.yaml，自动构建所有组件并生成 release
 #
 # 用法：
-#   ./build/build_all.sh riscv64                    # 默认版本 + riscv_b profile
-#   ./build/build_all.sh x86_64 v1.2.0              # 指定版本
-#   ./build/build_all.sh riscv64 v1.0.0 riscv_a     # 指定 node profile
+#   ./build/build_all.sh                          # 默认版本 + riscv_b profile
+#   ./build/build_all.sh v1.2.0                   # 指定版本
+#   ./build/build_all.sh v1.0.0 riscv_a           # 指定 node profile
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 COMPONENTS_FILE="$ROOT_DIR/components.yaml"
 
-PLATFORM=${1:?"用法: $0 <riscv64|x86_64> [version] [node_profile]"}
-VERSION=${2:-$(git -C "$ROOT_DIR" describe --tags --always --dirty 2>/dev/null || echo "v1.0.0")}
-NODE_PROFILE=${3:-riscv_b}
+VERSION=${1:-$(git -C "$ROOT_DIR" describe --tags --always --dirty 2>/dev/null || echo "v1.0.0")}
+NODE_PROFILE=${2:-riscv_b}
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-# 平台映射
-case "$PLATFORM" in
-    riscv64)
-        GOARCH=riscv64
-        PLATFORM_TARGET=riscv64
-        ;;
-    x86_64|x86|amd64)
-        GOARCH=amd64
-        PLATFORM=x86_64
-        PLATFORM_TARGET=x86
-        ;;
-    *)
-        echo "ERROR: 未知平台: $PLATFORM (支持: riscv64, x86_64)"
-        exit 1
-        ;;
-esac
-
-# x86 profile 强制为 x86
-if [ "$PLATFORM" = "x86_64" ]; then
-    NODE_PROFILE=x86
-fi
+PLATFORM=riscv64
+GOARCH=riscv64
+PLATFORM_TARGET=riscv64
 
 DIST_DIR="$ROOT_DIR/dist/$VERSION-$TIMESTAMP/$PLATFORM"
 mkdir -p "$DIST_DIR/bin"
 
 echo "============================================"
-echo " RiVision Build System"
-echo " Platform:     $PLATFORM (GOARCH=$GOARCH)"
+echo " RiVision Build System (K3 RISC-V native)"
+echo " Platform:     $PLATFORM"
 echo " Version:      $VERSION"
 echo " Node Profile: $NODE_PROFILE"
 echo " Output:       $DIST_DIR"
@@ -114,7 +95,7 @@ FAILED=()
 
 build_component() {
     local name=$1 type=$2 source=$3 build_cmd=$4 output=$5 install_as=$6
-    local output_riscv64=$7 output_x86_64=$8
+    local output_riscv64=$7
 
     STEP=$((STEP + 1))
     echo "[$STEP/$TOTAL] Building $name ($type)..."
@@ -130,9 +111,7 @@ build_component() {
 
     # 确定输出文件
     local resolved_output="$output"
-    if [ "$PLATFORM" = "x86_64" ] && [ -n "$output_x86_64" ]; then
-        resolved_output="$output_x86_64"
-    elif [ "$GOARCH" = "riscv64" ] && [ -n "$output_riscv64" ]; then
+    if [ -n "$output_riscv64" ]; then
         resolved_output="$output_riscv64"
     fi
 
@@ -162,27 +141,26 @@ build_component() {
 
 # 解析并执行
 COMP_NAME="" COMP_TYPE="" COMP_SOURCE="" COMP_BUILD="" COMP_OUTPUT="" COMP_INSTALL=""
-COMP_OUTPUT_RISCV64="" COMP_OUTPUT_X86_64=""
+COMP_OUTPUT_RISCV64=""
 
 while IFS= read -r token; do
     case "$token" in
         COMPONENT_START:*)
             COMP_NAME="${token#COMPONENT_START:}"
             COMP_TYPE="" COMP_SOURCE="" COMP_BUILD="" COMP_OUTPUT="" COMP_INSTALL=""
-            COMP_OUTPUT_RISCV64="" COMP_OUTPUT_X86_64=""
+            COMP_OUTPUT_RISCV64=""
             ;;
         PROP:type=*)         COMP_TYPE="${token#PROP:type=}" ;;
         PROP:source=*)       COMP_SOURCE="${token#PROP:source=}" ;;
         PROP:build_cmd=*)    COMP_BUILD="${token#PROP:build_cmd=}" ;;
         PROP:output=*)       COMP_OUTPUT="${token#PROP:output=}" ;;
         PROP:output_riscv64=*) COMP_OUTPUT_RISCV64="${token#PROP:output_riscv64=}" ;;
-        PROP:output_x86_64=*)  COMP_OUTPUT_X86_64="${token#PROP:output_x86_64=}" ;;
         PROP:install_as=*)   COMP_INSTALL="${token#PROP:install_as=}" ;;
         COMPONENT_END:*)
             if [ -n "$COMP_TYPE" ] && [ -n "$COMP_BUILD" ]; then
                 build_component "$COMP_NAME" "$COMP_TYPE" "$COMP_SOURCE" \
                     "$COMP_BUILD" "$COMP_OUTPUT" "$COMP_INSTALL" \
-                    "$COMP_OUTPUT_RISCV64" "$COMP_OUTPUT_X86_64"
+                    "$COMP_OUTPUT_RISCV64"
             fi
             ;;
     esac

@@ -1,0 +1,24 @@
+[Unit]
+Description=go2rtc - Video Stream Proxy for RiVision
+After=network.target
+Before=rivision-worker.service
+
+[Service]
+Type=simple
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_worker
+
+ExecStart=/opt/rivision/rivision_worker/bin/go2rtc -config /opt/rivision/rivision_worker/config/go2rtc.yaml
+
+Restart=always
+RestartSec=3
+
+LimitNOFILE=65535
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-go2rtc
+
+[Install]
+WantedBy=multi-user.target

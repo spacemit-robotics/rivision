@@ -1,0 +1,29 @@
+[Unit]
+Description=RiVision Hub - Central Management Server
+After=network.target rivision-gateway.service
+Wants=rivision-gateway.service
+
+[Service]
+Type=simple
+# User/Group 由 install.sh 替换为实际安装用户
+User=RIVISION_USER_PLACEHOLDER
+Group=RIVISION_GROUP_PLACEHOLDER
+WorkingDirectory=/opt/rivision/rivision_hub
+
+EnvironmentFile=-/opt/rivision/shared/.env
+EnvironmentFile=-/opt/rivision/rivision_hub/config/.env
+
+ExecStart=/opt/rivision/rivision_hub/bin/rivision-hub
+
+Restart=always
+RestartSec=5
+
+LimitNOFILE=65535
+LimitNPROC=65535
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rivision-hub
+
+[Install]
+WantedBy=multi-user.target
