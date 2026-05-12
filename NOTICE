@@ -90,6 +90,11 @@ This product contains portions of the following third-party software:
     Copyright (c) 2017-2026 Dailymotion
     Licensed under the Apache License 2.0.
 
+21. go2rtc-vue (https://github.com/oldweipro/go2rtc-vue)
+    Copyright (c) 2024-2026 oldweipro
+    Licensed under the MIT License.
+    Reference design for rivision_cli/go2rtc-vue frontend.
+
 ---------------------------------------------------------------------------
 Additional Attributions:
 ---------------------------------------------------------------------------

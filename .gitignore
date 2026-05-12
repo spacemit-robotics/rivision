@@ -22,11 +22,26 @@ src/rivision_embed/models/
 *.avi
 src/*/mp4path/
 
-# === 第三方预编译库（K3 系统自带，不入 git，不需要 rsync）===
+# === 第三方预编译库（K3 系统自带 / apt 安装，不入 git）===
 src/*/third_party/
 src/**/third_party/
 src/rivision_node/yolo-server/third_party/
 src/rivision_node/third_party/
+
+# 例外：rivision_worker bundle 以下 SDK（K3 专有，无 apt 包或需精确版本）
+# - mpp:                 SpacemiT MPP SDK (~2 MB，专有)
+# - spacemit-ort:        SpacemiT ONNX Runtime + EP (~57 MB)
+# - spacemit-llama.cpp:  SpacemiT llama.cpp (~31 MB)
+# - oatpp / oatpp-websocket: HTTP server (~5 MB)
+# 其他大型 SDK（ffmpeg / opencv / curl / sqlite3 / yaml-cpp / nlohmann_json /
+# go2rtc）走系统 /usr/lib 或 /opt/opencv-spacemit
+!src/rivision_worker/third_party/
+src/rivision_worker/third_party/*
+!src/rivision_worker/third_party/mpp/
+!src/rivision_worker/third_party/spacemit-ort/
+!src/rivision_worker/third_party/spacemit-llama.cpp/
+!src/rivision_worker/third_party/oatpp/
+!src/rivision_worker/third_party/oatpp-websocket/
 
 # === ZLMediaKit（K3 上从源码编译，submodule 管理）===
 # 注：以下 4 个子项目通过 git submodule 管理，不在 .gitignore 中排除
@@ -67,8 +82,9 @@ src/rivision_owl/gb28181-web/dist/
 .DS_Store
 Thumbs.db
 
-# === docs 独立仓库（gitlab 单独管理）===
-docs/
+# === docs ===
+# docs/ 目录用于存放应用文档
+# 注: 原 docs/ 独立仓库已合并到本仓库
 
 # === 临时 ===
 tmp/
