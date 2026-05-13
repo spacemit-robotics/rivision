@@ -36,7 +36,7 @@ CURDIR := $(shell pwd)
 
 # === Go 环境统一配置 ===
 # 所有子项目继承此设置，子项目 Makefile 不再单独设置
-GO_MIN_VERSION := 1.25.0
+GO_MIN_VERSION := 1.24.0
 export GOPROXY := https://goproxy.cn,https://proxy.golang.org,direct
 export GONOSUMDB := *
 
@@ -628,7 +628,8 @@ REMOTE_NODES ?= \
 
 REMOTE_REPO   ?= $(shell git config --get remote.origin.url 2>/dev/null)
 REMOTE_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
-REMOTE_DIR    ?= ~/rivision
+# 注意：使用 ~/rivision-build 而非 ~/rivision，避开 K3 上既有的 v3 deployment 目录
+REMOTE_DIR    ?= ~/rivision-build
 REMOTE_LOG    := $(CURDIR)/remote-logs
 
 # Sudo 密码注入（install.sh 需要 root）
@@ -653,16 +654,20 @@ remote-clone:
 			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "set -e; \
 				if [ -d $(REMOTE_DIR)/.git ]; then \
 					cd $(REMOTE_DIR) && git fetch origin && git checkout $(REMOTE_BRANCH) && git reset --hard origin/$(REMOTE_BRANCH); \
+				elif [ -d $(REMOTE_DIR) ]; then \
+					echo 'ERROR: $(REMOTE_DIR) 存在但不是 git 仓库，拒绝覆盖。请手动处理。'; exit 2; \
 				else \
 					git clone -b $(REMOTE_BRANCH) $(REMOTE_REPO) $(REMOTE_DIR); \
-				fi 2>&1 | tail -6"; \
+				fi && \
+				git -C $(REMOTE_DIR) rev-parse --short HEAD" 2>&1 | tail -6; \
 		) > $$log 2>&1 & \
 	done; wait
 	@echo ""
 	@for n in $(REMOTE_NODES); do \
 		h=$${n%:*}; log=$(REMOTE_LOG)/clone__$$(echo $$h | tr '@' '_').log; \
-		if grep -qE "HEAD is now at|already up to date|Cloning into" $$log; then \
-			echo "  ✅ $$h"; \
+		head=$$(ssh -n -o BatchMode=yes -o ConnectTimeout=5 $$h "git -C $(REMOTE_DIR) rev-parse --short HEAD 2>/dev/null" 2>/dev/null); \
+		if [ -n "$$head" ]; then \
+			echo "  ✅ $$h  HEAD=$$head"; \
 		else \
 			echo "  ❌ $$h (see $$log)"; tail -3 $$log | sed 's/^/      /'; \
 		fi; \
