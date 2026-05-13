@@ -446,11 +446,11 @@ worker:
 	@COMP_DIR=$(CURDIR)/dist/rivision_worker; \
 	mkdir -p $$COMP_DIR/bin $$COMP_DIR/config $$COMP_DIR/services $$COMP_DIR/lib $$COMP_DIR/models; \
 	echo "[1/4] Building C++ binary..."; \
-	cd $(SRC_DIR)/rivision_worker && \
+	cd $(CURDIR)/../src/rivision_worker && \
 		mkdir -p build && cd build && \
 		cmake .. -DCMAKE_BUILD_TYPE=Release && \
 		make -j$$(nproc); \
-	cp $(SRC_DIR)/rivision_worker/build/rivision-worker $$COMP_DIR/bin/; \
+	cp $(CURDIR)/../src/rivision_worker/build/rivision-worker $$COMP_DIR/bin/; \
 	echo "[2/4] Copying config and services..."; \
 	cp $(SRC_DIR)/rivision_worker/config/*.yaml $$COMP_DIR/config/ 2>/dev/null || true; \
 	cp $(CURDIR)/templates/rivision-worker.service $$COMP_DIR/services/ 2>/dev/null || true; \
@@ -534,11 +534,11 @@ release-server-node: check-env
 	mkdir -p $$NODE_DIR/bin $$NODE_DIR/config $$NODE_DIR/services $$NODE_DIR/lib \
 	         $$NODE_DIR/models/embed $$NODE_DIR/models/yolo $$NODE_DIR/models/vlm && \
 	echo "[1/4] Building rivision_worker (C++ with built-in inference)..." && \
-	cd $(SRC_DIR)/rivision_worker && \
+	cd $(CURDIR)/../src/rivision_worker && \
 		mkdir -p build && cd build && \
 		cmake .. -DCMAKE_BUILD_TYPE=Release && \
 		make -j$$(nproc) && \
-	cp $(SRC_DIR)/rivision_worker/build/rivision-worker $$NODE_DIR/bin/ && \
+	cp $(CURDIR)/../src/rivision_worker/build/rivision-worker $$NODE_DIR/bin/ && \
 	echo "      ✅ rivision-worker (C++) 构建完成" && \
 	echo "[2/4] Building rivision_embed..." && \
 	cd $(SRC_DIR)/rivision_embed && make build-riscv64 VERSION=$(VERSION) --no-print-directory && \
