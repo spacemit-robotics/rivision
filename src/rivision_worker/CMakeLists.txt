@@ -218,76 +218,42 @@ if(USE_OATPP)
 endif()
 
 # =============================================================================
-# ONNX Runtime + SpacemiT EP — 仅使用 bundled SDK（不用系统 apt）
-#   优先级:
-#     1) -DSPACEMIT_ORT_DIR=... 显式覆盖
-#     2) third_party/spacemit-ort/  (bundled，仓库自带)
-#     3) /opt/spacemit-ort/         (手动安装，与 OpenCV 同位置)
+# ONNX Runtime + SpacemiT EP — 固定使用 third_party/spacemit-ort/（bundled）
 # =============================================================================
-set(_BUNDLED_ORT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spacemit-ort")
-find_path(ONNXRUNTIME_INCLUDE_DIR onnxruntime_cxx_api.h
-    PATHS
-        ${SPACEMIT_ORT_DIR}/include
-        ${_BUNDLED_ORT}/include
-        /opt/spacemit-ort/include
-    NO_DEFAULT_PATH)
+set(SPACEMIT_ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spacemit-ort")
 
-find_library(ONNXRUNTIME_LIBRARY onnxruntime
-    PATHS
-        ${SPACEMIT_ORT_DIR}/lib
-        ${_BUNDLED_ORT}/lib
-        /opt/spacemit-ort/lib
-    NO_DEFAULT_PATH)
-
-find_library(SPACEMIT_EP_LIBRARY spacemit_ep
-    PATHS
-        ${SPACEMIT_ORT_DIR}/lib
-        ${_BUNDLED_ORT}/lib
-        /opt/spacemit-ort/lib
-    NO_DEFAULT_PATH)
-
-if(ONNXRUNTIME_INCLUDE_DIR AND ONNXRUNTIME_LIBRARY)
-    get_filename_component(ONNXRUNTIME_LIB_DIR ${ONNXRUNTIME_LIBRARY} DIRECTORY)
-    set(ONNXRUNTIME_FOUND TRUE)
-    message(STATUS "ONNX Runtime: ${ONNXRUNTIME_LIBRARY}")
-    if(SPACEMIT_EP_LIBRARY)
-        message(STATUS "SpacemiT EP:  ${SPACEMIT_EP_LIBRARY}")
-    else()
-        rv_mark_missing_other("libspacemit_ep.so not found alongside libonnxruntime.so — NPU 加速将禁用")
-    endif()
-else()
+if(NOT EXISTS "${SPACEMIT_ORT_ROOT}/include/onnxruntime_cxx_api.h")
     rv_mark_missing_other(
-        "SpacemiT ONNX Runtime not found. Unpack spacemit-ort.riscv64.<VER>.tar.gz to third_party/spacemit-ort/. (System apt versions are intentionally not used.)")
+        "SpacemiT ORT SDK not found at third_party/spacemit-ort/. "
+        "Unpack spacemit-ort.riscv64.*.tar.gz to that directory.")
+else()
+    set(ONNXRUNTIME_INCLUDE_DIR "${SPACEMIT_ORT_ROOT}/include")
+    set(ONNXRUNTIME_LIB_DIR     "${SPACEMIT_ORT_ROOT}/lib")
+    set(ONNXRUNTIME_FOUND TRUE)
+    message(STATUS "ONNX Runtime: ${SPACEMIT_ORT_ROOT}/lib (bundled)")
+endif()
+
+if(ONNXRUNTIME_FOUND AND NOT EXISTS "${SPACEMIT_ORT_ROOT}/lib/libspacemit_ep.so")
+    rv_mark_missing_other("libspacemit_ep.so missing from third_party/spacemit-ort/lib/")
+else()
+    set(SPACEMIT_EP_FOUND TRUE)
+    message(STATUS "SpacemiT EP:  ${SPACEMIT_ORT_ROOT}/lib/libspacemit_ep.so (bundled)")
 endif()
 
 # =============================================================================
-# llama.cpp — 仅使用 bundled SDK（不用系统 apt）
-#   优先级:
-#     1) -DSPACEMIT_LLAMA_DIR=... 显式覆盖
-#     2) third_party/spacemit-llama.cpp/   (bundled)
-#     3) /opt/spacemit-llama.cpp/          (手动安装)
+# llama.cpp — 固定使用 third_party/spacemit-llama.cpp/（bundled）
 # =============================================================================
 if(BUILD_VLM)
-    set(_BUNDLED_LLAMA "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spacemit-llama.cpp")
-    find_path(LLAMA_INCLUDE_DIR llama.h
-        PATHS
-            ${SPACEMIT_LLAMA_DIR}/include
-            ${_BUNDLED_LLAMA}/include
-            /opt/spacemit-llama.cpp/include
-        NO_DEFAULT_PATH)
-
-    find_library(LLAMA_LIBRARY llama
-        PATHS
-            ${SPACEMIT_LLAMA_DIR}/lib
-            ${_BUNDLED_LLAMA}/lib
-            /opt/spacemit-llama.cpp/lib
-        NO_DEFAULT_PATH)
-
-    if(LLAMA_LIBRARY)
-        message(STATUS "llama.cpp:    ${LLAMA_LIBRARY}")
-    else()
+    set(SPACEMIT_LLAMA_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spacemit-llama.cpp")
+    if(NOT EXISTS "${SPACEMIT_LLAMA_ROOT}/include/llama.h")
         rv_mark_missing_other(
-            "SpacemiT llama.cpp not found (BUILD_VLM=ON). Unpack spacemit-llama.cpp.riscv64.<VER>.tar.gz to third_party/spacemit-llama.cpp/. (System apt versions are intentionally not used.)")
+            "SpacemiT llama.cpp SDK not found at third_party/spacemit-llama.cpp/. "
+            "Unpack spacemit-llama.cpp.riscv64.*.tar.gz to that directory.")
+    else()
+        set(LLAMA_INCLUDE_DIR "${SPACEMIT_LLAMA_ROOT}/include")
+        set(LLAMA_LIB_DIR     "${SPACEMIT_LLAMA_ROOT}/lib")
+        set(LLAMA_FOUND TRUE)
+        message(STATUS "llama.cpp:    ${SPACEMIT_LLAMA_ROOT}/lib (bundled)")
     endif()
 endif()
 
@@ -556,11 +522,18 @@ target_link_libraries(rivision_worker PRIVATE
     avformat avcodec swresample avutil   # system FFmpeg (apt: libavformat-dev ...)
 )
 
-# ONNX Runtime
-target_include_directories(rivision_worker PRIVATE ${ONNXRUNTIME_INCLUDE_DIR})
-target_link_directories(rivision_worker PRIVATE ${ONNXRUNTIME_LIB_DIR})
-target_link_libraries(rivision_worker PRIVATE onnxruntime)
-add_definitions(-DUSE_ONNXRUNTIME)
+# ONNX Runtime + SpacemiT EP — 两者必须同时链接（spacemit_ep 含 NPU 加速入口）
+if(ONNXRUNTIME_FOUND)
+    target_include_directories(rivision_worker PRIVATE ${ONNXRUNTIME_INCLUDE_DIR})
+    target_link_directories(rivision_worker PRIVATE ${ONNXRUNTIME_LIB_DIR})
+    target_link_libraries(rivision_worker PRIVATE onnxruntime spacemit_ep)
+    # BUILD_RPATH: 让编译出的二进制在 K3 本地运行时能找到 bundled .so
+    set_target_properties(rivision_worker PROPERTIES
+        BUILD_RPATH  "${ONNXRUNTIME_LIB_DIR}"
+        INSTALL_RPATH "$ORIGIN/../lib"
+    )
+    add_definitions(-DUSE_ONNXRUNTIME)
+endif()
 
 # =============================================================================
 # VLM executable (optional)
@@ -598,10 +571,15 @@ if(BUILD_VLM)
         ${OpenCV_LIBS}
     )
 
-    # llama.cpp — 复用主段已探测到的 bundled SDK (LLAMA_LIBRARY + LLAMA_INCLUDE_DIR)
-    if(LLAMA_LIBRARY)
+    # llama.cpp — bundled at third_party/spacemit-llama.cpp/
+    if(LLAMA_FOUND)
         target_include_directories(rivision_vlm PRIVATE ${LLAMA_INCLUDE_DIR})
-        target_link_libraries(rivision_vlm PRIVATE ${LLAMA_LIBRARY})
+        target_link_directories(rivision_vlm PRIVATE ${LLAMA_LIB_DIR})
+        target_link_libraries(rivision_vlm PRIVATE llama ggml ggml-base)
+        set_target_properties(rivision_vlm PROPERTIES
+            BUILD_RPATH  "${LLAMA_LIB_DIR}"
+            INSTALL_RPATH "$ORIGIN/../lib"
+        )
     endif()
 endif()
 
@@ -640,7 +618,7 @@ install(DIRECTORY config/ DESTINATION config)
 # Summary
 # =============================================================================
 message(STATUS "=== rivision_worker Build Configuration ===")
-message(STATUS "  Platform:    riscv64 (K3 SpacemiT, native)")
+message(STATUS "  Platform:    riscv64 (K3 SpacemiT)")
 message(STATUS "  BUILD_TYPE:  ${CMAKE_BUILD_TYPE}")
 message(STATUS "  BUILD_VLM:   ${BUILD_VLM}")
 message(STATUS "  BUILD_TESTS: ${BUILD_TESTS}")
