@@ -3,7 +3,6 @@
 # 统一构建组件:
 #   rivision_cli, rivision_gateway, rivision_embed, rivision_owl, rivision_node
 #   rivision_hub, rivision_worker (C++ with built-in inference), rivision_app_web
-# 平台: 仅 RISC-V K3 (SpacemiT), K3 设备上原生编译
 # ============================================================
 
 # 默认目标: release (K3 RISC-V)
@@ -68,7 +67,7 @@ SERVER_LDFLAGS := -s -w \
 #   - 多节点 fleet 检查 → 不集成，需要时直接 ssh <node> 跑 cmake 即可
 # ============================================================
 check-env:
-	@echo "🔍 Hub 侧构建环境检查（worker 侧由 CMake 自检）..."
+	@echo "🔍 构建环境检查..."
 	@ERRORS=0; \
 	echo ""; \
 	echo "  --- 工具链（hub Go + app_web Node）---"; \
@@ -119,7 +118,7 @@ check-env:
 		echo ""; \
 		exit 1; \
 	fi; \
-	echo "  ✅ Hub 侧检查通过（worker 依赖将在 cmake 配置时校验）"
+	echo "  ✅ 环境检查通过（worker 依赖将在 cmake 配置时自动安装）"
 	@echo ""
 
 # 兼容旧目标名
@@ -445,6 +444,11 @@ worker:
 	@echo ""
 	@COMP_DIR=$(CURDIR)/dist/rivision_worker; \
 	mkdir -p $$COMP_DIR/bin $$COMP_DIR/config $$COMP_DIR/services $$COMP_DIR/lib $$COMP_DIR/models; \
+	echo "[0/4] Installing worker build dependencies (apt)..."; \
+	sudo apt-get install -y -q \
+		libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev \
+		libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
+		2>&1 | grep -v "^Reading\|^Building\|^Hit\|^Get\|^Fetched" | tail -3 || true; \
 	echo "[1/4] Building C++ binary..."; \
 	cd $(CURDIR)/../src/rivision_worker && \
 		mkdir -p build && cd build && \
@@ -520,7 +524,7 @@ release-server-host: check-env
 #     OWL+ZLM 在 worker_owl 模式下需要 (GB28181 同子网场景)
 # ============================================================
 
-release-server-node: check-env
+release-server-node:
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════╗"
 	@echo "║  🚀 Server Node: worker + embed + go2rtc + owl                ║"
@@ -528,6 +532,12 @@ release-server-node: check-env
 	@echo "  Version:  $(VERSION)"
 	@echo "  Platform: riscv64 (K3 native)"
 	@echo "  Note:     C++ Worker has built-in YOLO+VLM inference"
+	@echo ""
+	@echo "[0/4] Installing worker build dependencies (apt)..."
+	@sudo apt-get install -y -q \
+		libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev \
+		libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
+		2>&1 | grep -v "^Reading\|^Building\|^Hit\|^Get\|^Fetched" | tail -5 || true
 	@echo ""
 	@DIST_BASE=$(CURDIR)/../dist/$(VERSION)/riscv64 && \
 	NODE_DIR=$$DIST_BASE/server-node && \
@@ -565,9 +575,14 @@ release-server-node: check-env
 	if [ ! -d "$(CURDIR)/dist/rivision_owl/bin" ]; then \
 		echo ""; \
 		echo "  ❌ 错误: OWL 组件未找到"; \
-		echo "  OWL 是必选组件，请先构建: make owl"; \
 		echo ""; \
-		exit 1; \
+		cd $(CURDIR) && $(MAKE) owl --no-print-directory || { \
+			echo ""; \
+			echo "  ❌ OWL 构建失败，请手动运行:"; \
+			echo "    make owl"; \
+			echo ""; \
+			exit 1; \
+		}; \
 	fi && \
 	mkdir -p $$NODE_DIR/owl/bin $$NODE_DIR/owl/config && \
 	cp $(CURDIR)/dist/rivision_owl/bin/owl $$NODE_DIR/owl/bin/ && \
@@ -613,159 +628,6 @@ clean:
 	@rm -rf dist/*
 	@echo "  ✅ 清理完成"
 
-# ============================================================
-# 多节点远程编排 (deploy fleet)
-#
-# 节点列表格式: <user@host>:<role>
-#   role = hub | worker
-# 默认 fleet（可用 REMOTE_NODES=... 覆盖）：
-REMOTE_NODES ?= \
-    node@nodehost:hub \
-    node@node3:worker \
-    bianbu@node4:worker \
-    bianbu@node5:worker \
-    bianbu@node6:worker
-
-REMOTE_REPO   ?= $(shell git config --get remote.origin.url 2>/dev/null)
-REMOTE_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
-# 注意：使用 ~/rivision-build 而非 ~/rivision，避开 K3 上既有的 v3 deployment 目录
-REMOTE_DIR    ?= ~/rivision-build
-REMOTE_LOG    := $(CURDIR)/remote-logs
-
-# Sudo 密码注入（install.sh 需要 root）
-#   方式 A: SUDO_PASS=xxx make remote-install     (所有节点同一密码)
-#   方式 B: 每节点环境变量 SUDO_PASS_node_AT_host  (推荐，名称中 @→_AT_)
-SUDO_PASS ?=
-
-.PHONY: remote-clone remote-build remote-install remote-test remote-all remote-status
-
-# ─── remote-clone: 5 节点并行 git clone/pull ─────────────────────
-remote-clone:
-	@mkdir -p $(REMOTE_LOG)
-	@echo "═══ Cloning/Pulling on $(words $(REMOTE_NODES)) nodes ═══"
-	@echo "  Repo:   $(REMOTE_REPO)"
-	@echo "  Branch: $(REMOTE_BRANCH)"
-	@echo "  Dir:    $(REMOTE_DIR)"
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; \
-		log=$(REMOTE_LOG)/clone__$$(echo $$h | tr '@' '_').log; \
-		( \
-			echo "─── $$h ───"; \
-			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "set -e; \
-				if [ -d $(REMOTE_DIR)/.git ]; then \
-					cd $(REMOTE_DIR) && git fetch origin && git checkout $(REMOTE_BRANCH) && git reset --hard origin/$(REMOTE_BRANCH); \
-				elif [ -d $(REMOTE_DIR) ]; then \
-					echo 'ERROR: $(REMOTE_DIR) 存在但不是 git 仓库，拒绝覆盖。请手动处理。'; exit 2; \
-				else \
-					git clone -b $(REMOTE_BRANCH) $(REMOTE_REPO) $(REMOTE_DIR); \
-				fi && \
-				git -C $(REMOTE_DIR) rev-parse --short HEAD" 2>&1 | tail -6; \
-		) > $$log 2>&1 & \
-	done; wait
-	@echo ""
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; log=$(REMOTE_LOG)/clone__$$(echo $$h | tr '@' '_').log; \
-		head=$$(ssh -n -o BatchMode=yes -o ConnectTimeout=5 $$h "git -C $(REMOTE_DIR) rev-parse --short HEAD 2>/dev/null" 2>/dev/null); \
-		if [ -n "$$head" ]; then \
-			echo "  ✅ $$h  HEAD=$$head"; \
-		else \
-			echo "  ❌ $$h (see $$log)"; tail -3 $$log | sed 's/^/      /'; \
-		fi; \
-	done
-
-# ─── remote-build: 5 节点并行编译（hub 跑 release-server-host, worker 跑 release-server-node）
-remote-build:
-	@mkdir -p $(REMOTE_LOG)
-	@echo "═══ Building on $(words $(REMOTE_NODES)) nodes (并行) ═══"
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; role=$${n##*:}; \
-		log=$(REMOTE_LOG)/build__$$(echo $$h | tr '@' '_').log; \
-		if [ "$$role" = "hub" ]; then tgt="release-server-host"; else tgt="release-server-node"; fi; \
-		( \
-			echo "─── $$h (role=$$role, target=$$tgt) ───"; \
-			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "cd $(REMOTE_DIR) && export GOPROXY=https://goproxy.cn,direct && make -C build $$tgt 2>&1 | tail -40"; \
-		) > $$log 2>&1 & \
-	done; wait
-	@echo ""
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; log=$(REMOTE_LOG)/build__$$(echo $$h | tr '@' '_').log; \
-		if grep -qE "Complete|Built target|Build complete" $$log; then \
-			echo "  ✅ $$h"; \
-		else \
-			echo "  ❌ $$h (see $$log)"; tail -5 $$log | sed 's/^/      /'; \
-		fi; \
-	done
-
-# ─── remote-install: 5 节点跑 install.sh (需要 sudo) ───────────────
-# 用法: SUDO_PASS=node123 make remote-install NODES="node@nodehost:hub"
-#       或: SUDO_PASS_bianbu_AT_node4=bianbu make remote-install
-remote-install:
-	@mkdir -p $(REMOTE_LOG)
-	@echo "═══ Running install.sh on $(words $(REMOTE_NODES)) nodes ═══"
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; role=$${n##*:}; \
-		log=$(REMOTE_LOG)/install__$$(echo $$h | tr '@' '_').log; \
-		if [ "$$role" = "hub" ]; then pkg="server-host"; else pkg="server-node"; fi; \
-		pass_var=SUDO_PASS_$$(echo $$h | tr '@.-' '___' | tr '[:lower:]' '[:upper:]'); \
-		pass=$$(eval echo \$${$$pass_var:-$(SUDO_PASS)}); \
-		if [ -z "$$pass" ]; then \
-			echo "  ⚠️  $$h: 未设置密码 (export $$pass_var=... 或 SUDO_PASS=...)，跳过"; \
-			continue; \
-		fi; \
-		( \
-			echo "─── $$h (pkg=$$pkg) ───"; \
-			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "set -e; \
-				PKG_DIR=\$$(ls -d $(REMOTE_DIR)/dist/*/riscv64/$$pkg 2>/dev/null | head -1); \
-				if [ -z \"\$$PKG_DIR\" ]; then echo '❌ 未找到 dist/.../$$pkg/，请先 remote-build'; exit 1; fi; \
-				echo '$$pass' | sudo -S -v && cd \"\$$PKG_DIR\" && sudo ./install.sh 2>&1 | tail -20"; \
-		) > $$log 2>&1 & \
-	done; wait
-	@echo ""
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; log=$(REMOTE_LOG)/install__$$(echo $$h | tr '@' '_').log; \
-		if [ -f $$log ]; then \
-			if grep -qE "Installation complete|安装完成|✓ installed" $$log; then \
-				echo "  ✅ $$h"; \
-			else \
-				echo "  ❌ $$h"; tail -3 $$log | sed 's/^/      /'; \
-			fi; \
-		fi; \
-	done
-
-# ─── remote-test: 5 节点 smoke test 已安装的二进制 ─────────────────
-remote-test:
-	@mkdir -p $(REMOTE_LOG)
-	@echo "═══ Smoke test on $(words $(REMOTE_NODES)) nodes ═══"
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; role=$${n##*:}; \
-		log=$(REMOTE_LOG)/test__$$(echo $$h | tr '@' '_').log; \
-		if [ "$$role" = "hub" ]; then bin="/opt/rivision/rivision_hub/bin/rivision-hub"; \
-		else bin="/opt/rivision/rivision_worker/bin/rivision-worker"; fi; \
-		( \
-			echo "─── $$h (bin=$$bin) ───"; \
-			ssh -n -o BatchMode=yes -o StrictHostKeyChecking=no $$h "if [ -x $$bin ]; then \
-				file $$bin && $$bin --version 2>&1 | head -5 || $$bin --help 2>&1 | head -5; \
-			else echo '❌ 二进制不存在: $$bin'; fi"; \
-		) > $$log 2>&1 & \
-	done; wait
-	@echo ""
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; log=$(REMOTE_LOG)/test__$$(echo $$h | tr '@' '_').log; \
-		if grep -q "ELF.*RISC-V" $$log; then echo "  ✅ $$h"; tail -4 $$log | sed 's/^/      /'; \
-		else echo "  ❌ $$h"; tail -3 $$log | sed 's/^/      /'; fi; \
-	done
-
-# ─── remote-all: 串行执行 clone → build → install → test ─────────
-remote-all: remote-clone remote-build remote-install remote-test
-
-# ─── remote-status: 仅看每节点是否有可用 dist 包 ───────────────────
-remote-status:
-	@for n in $(REMOTE_NODES); do \
-		h=$${n%:*}; role=$${n##*:}; \
-		if [ "$$role" = "hub" ]; then pkg="server-host"; else pkg="server-node"; fi; \
-		ssh -n -o BatchMode=yes -o ConnectTimeout=5 $$h "ls -d $(REMOTE_DIR)/dist/*/riscv64/$$pkg 2>/dev/null && echo OK $$h $$pkg || echo MISS $$h $$pkg" 2>/dev/null | tail -1 | sed 's/^/  /'; \
-	done
-
 help:
 	@echo "============================================================"
 	@echo "RiVision Deploy - K3 RISC-V 构建系统"
@@ -798,15 +660,6 @@ help:
 	@echo "Server 产品级打包 (输出到 dist/<VERSION>/riscv64/):"
 	@echo "  release-server-host                - server-host (hub + gateway + owl + app_web)"
 	@echo "  release-server-node                - server-node (worker + embed + go2rtc + owl)"
-	@echo ""
-	@echo "多节点远程编排 (5 K3 fleet):"
-	@echo "  remote-clone                       - 所有节点 git clone/pull (并行)"
-	@echo "  remote-build                       - 所有节点编译对应 release-server-* (并行)"
-	@echo "  remote-install                     - 所有节点跑 install.sh (需要 SUDO_PASS)"
-	@echo "  remote-test                        - 所有节点 smoke test 已装二进制"
-	@echo "  remote-all                         - clone → build → install → test"
-	@echo "  remote-status                      - 仅查看每节点 dist 包状态"
-	@echo "  变量: REMOTE_NODES, REMOTE_REPO, REMOTE_BRANCH, REMOTE_DIR, SUDO_PASS"
 	@echo ""
 	@echo "CLI 相关:"
 	@echo "  cli-web                            - 增量构建 Web 前端"

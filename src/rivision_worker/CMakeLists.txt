@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(rivision_worker VERSION 1.0.0 LANGUAGES CXX C)
 
 # =============================================================================
-# RiVision Worker — K3 SpacemiT RISC-V64 native build only
+# RiVision Worker
 # =============================================================================
 
 # C++ Standard
@@ -17,7 +17,7 @@ if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
     message(FATAL_ERROR
         "\n  RiVision Worker is K3-only (SpacemiT riscv64).\n"
         "  Current CMAKE_SYSTEM_PROCESSOR = '${CMAKE_SYSTEM_PROCESSOR}'\n"
-        "  Build on a K3 device (Bianbu OS / Ubuntu riscv64), not on x86 host.\n"
+        "  Build on a K3 device (Bianbu OS / Ubuntu riscv64)\n"
     )
 endif()
 
@@ -103,6 +103,7 @@ if(NOT nlohmann_json_FOUND)
     FetchContent_Declare(
         json
         URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
     FetchContent_MakeAvailable(json)
     include_directories(${json_SOURCE_DIR}/include)
@@ -327,6 +328,14 @@ set(CORE_SOURCES
     src/core/analytics/heatmap.cpp
     src/core/search/engine.cpp
     src/core/search/vectorize.cpp
+    src/core/search/smart_engine.cpp
+    src/core/search/rrf_fusion.cpp
+    src/core/search/vlm_reranker.cpp
+    src/core/search/intent_parser.cpp
+    src/core/search/query_cache.cpp
+    src/core/search/session_manager.cpp
+    src/core/search/async_precompute.cpp
+    src/core/search/federated_search.cpp
     src/core/tracker/byte_track.cpp
 )
 
@@ -339,6 +348,14 @@ set(CORE_HEADERS
     src/core/analytics/heatmap.h
     src/core/search/engine.h
     src/core/search/vectorize.h
+    src/core/search/smart_engine.h
+    src/core/search/rrf_fusion.h
+    src/core/search/vlm_reranker.h
+    src/core/search/intent_parser.h
+    src/core/search/query_cache.h
+    src/core/search/session_manager.h
+    src/core/search/async_precompute.h
+    src/core/search/federated_search.h
 )
 
 # Pipeline sources
@@ -381,6 +398,9 @@ set(STORAGE_SOURCES
     src/storage/vector_store.cpp
     src/storage/recording_store.cpp
     src/storage/stream_store.cpp
+    src/storage/fts5_index.cpp
+    src/storage/tracklet_store.cpp
+    src/storage/hnsw_store.cpp
 )
 
 # Hub sources
@@ -425,7 +445,6 @@ endif()
 
 # Utils sources
 set(UTILS_SOURCES
-    src/utils/logger.cpp
     src/utils/metrics.cpp
     src/utils/system_monitor.cpp
     src/utils/color_cvt.cpp
@@ -444,17 +463,29 @@ set(BACKEND_SOURCES
 
 # VLM client sources (conditional)
 if(USE_VLM_CLIENT)
-    set(VLM_CLIENT_SOURCES src/vlm/vlm_client.cpp)
+    set(VLM_CLIENT_SOURCES 
+        src/vlm/vlm_client.cpp
+        src/vlm/vlm_batch_client.cpp
+        src/vlm/llama_engine.cpp
+        src/vlm/llama_server_manager.cpp
+        src/vlm/vision_encoder.cpp
+    )
 else()
-    set(VLM_CLIENT_SOURCES "")
+    set(VLM_SOURCES "")
 endif()
+
+# Embed sources (built-in CLIP embedding, same pattern as YOLO)
+set(EMBED_SOURCES
+    src/embed/embed_service.cpp
+)
 
 # =============================================================================
 # Main executable: rivision_worker
 # =============================================================================
 add_executable(rivision_worker
     src/main.cpp
-    ${VLM_CLIENT_SOURCES}
+    ${VLM_SOURCES}
+    ${EMBED_SOURCES}
     ${CORE_SOURCES}
     ${CORE_HEADERS}
     ${PIPELINE_SOURCES}
@@ -618,7 +649,7 @@ install(DIRECTORY config/ DESTINATION config)
 # Summary
 # =============================================================================
 message(STATUS "=== rivision_worker Build Configuration ===")
-message(STATUS "  Platform:    riscv64 (K3 SpacemiT)")
+message(STATUS "  Platform:    riscv64 (SpacemiT K3)")
 message(STATUS "  BUILD_TYPE:  ${CMAKE_BUILD_TYPE}")
 message(STATUS "  BUILD_VLM:   ${BUILD_VLM}")
 message(STATUS "  BUILD_TESTS: ${BUILD_TESTS}")
