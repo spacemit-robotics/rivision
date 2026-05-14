@@ -24,7 +24,7 @@ endif()
 # =============================================================================
 # Build Options (功能开关，非平台开关)
 # =============================================================================
-option(BUILD_VLM "Build VLM inference service" ON)
+option(BUILD_VLM "Build standalone VLM service executable" OFF)
 option(USE_VLM_CLIENT "Enable VLM HTTP client for AI verification" ON)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
@@ -567,24 +567,44 @@ if(ONNXRUNTIME_FOUND)
 endif()
 
 # =============================================================================
-# VLM executable (optional)
+# VLM standalone executable (optional, BUILD_VLM=OFF by default)
+# Enable with: cmake .. -DBUILD_VLM=ON
+# Source layout uses vlm_service.cpp as entry point (replaces old main_vlm.cpp)
 # =============================================================================
 if(BUILD_VLM)
     set(VLM_SOURCES
-        src/vlm/main_vlm.cpp
-        src/vlm/vlm_server.cpp
-        src/vlm/llm_engine.cpp
+        src/vlm/vlm_service.cpp
+        src/vlm/llama_engine.cpp
+        src/vlm/llama_server_manager.cpp
+        src/vlm/description_generator.cpp
+        src/vlm/unified_vlm_search.cpp
         src/vlm/vision_encoder.cpp
+        src/vlm/vlm_batch_client.cpp
     )
 
     set(VLM_HEADERS
-        src/vlm/vlm_server.h
-        src/vlm/llm_engine.h
+        src/vlm/vlm_service.h
+        src/vlm/llama_engine.h
+        src/vlm/llama_server_manager.h
+        src/vlm/description_generator.h
+        src/vlm/unified_vlm_search.h
         src/vlm/vision_encoder.h
         src/vlm/vlm_client.h
+        src/vlm/vlm_batch_client.h
         src/vlm/prompt_template.h
     )
 
+    # Verify all VLM sources exist before declaring target
+    set(_VLM_OK TRUE)
+    foreach(_f ${VLM_SOURCES})
+        if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_f}")
+            message(WARNING "BUILD_VLM=ON but source missing: ${_f} — skipping rivision_vlm")
+            set(_VLM_OK FALSE)
+            break()
+        endif()
+    endforeach()
+
+    if(_VLM_OK)
     add_executable(rivision_vlm
         ${VLM_SOURCES}
         ${VLM_HEADERS}
@@ -612,7 +632,8 @@ if(BUILD_VLM)
             INSTALL_RPATH "$ORIGIN/../lib"
         )
     endif()
-endif()
+    endif() # _VLM_OK
+endif() # BUILD_VLM
 
 # =============================================================================
 # Tests

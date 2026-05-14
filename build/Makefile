@@ -186,10 +186,6 @@ check-env-worker:
 		ERRORS=$$((ERRORS+$$SDK_ERR)); \
 	fi; \
 	echo ""; \
-	echo "  --- 运行时设备（仅信息，build 不需要）---"; \
-	[ -e /dev/mpp ] && echo "  ✅ /dev/mpp" || echo "  ℹ️  /dev/mpp 不存在（运行时才需要）"; \
-	[ -e /dev/npu ] && echo "  ✅ /dev/npu" || echo "  ℹ️  /dev/npu 不存在（运行时才需要）"; \
-	echo ""; \
 	if [ $$ERRORS -gt 0 ]; then \
 		echo "  ❌ Worker 侧 $$ERRORS 个问题，修复后再执行 make worker"; exit 1; \
 	fi; \
@@ -525,7 +521,7 @@ worker: check-env-worker
 	echo "[1/4] Building C++ binary..."; \
 	cd $(CURDIR)/../src/rivision_worker && \
 		mkdir -p build && cd build && \
-		cmake .. -DCMAKE_BUILD_TYPE=Release && \
+		cmake .. -DCMAKE_BUILD_TYPE=Release -Wno-dev && \
 		make -j$$(nproc); \
 	cp $(CURDIR)/../src/rivision_worker/build/rivision-worker $$COMP_DIR/bin/; \
 	echo "[2/4] Copying config and services..."; \
@@ -613,7 +609,7 @@ release-server-node: check-env-worker
 	echo "[1/4] Building rivision_worker (C++ with built-in inference)..." && \
 	cd $(CURDIR)/../src/rivision_worker && \
 		mkdir -p build && cd build && \
-		cmake .. -DCMAKE_BUILD_TYPE=Release && \
+		cmake .. -DCMAKE_BUILD_TYPE=Release -Wno-dev && \
 		make -j$$(nproc) && \
 	cp $(CURDIR)/../src/rivision_worker/build/rivision-worker $$NODE_DIR/bin/ && \
 	echo "      ✅ rivision-worker (C++) 构建完成" && \
