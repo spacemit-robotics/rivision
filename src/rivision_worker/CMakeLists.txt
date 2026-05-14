@@ -24,7 +24,7 @@ endif()
 # =============================================================================
 # Build Options (功能开关，非平台开关)
 # =============================================================================
-option(BUILD_VLM "Build standalone VLM service executable" OFF)
+option(BUILD_VLM "Build VLM inference service (compiled into rivision_worker)" ON)
 option(USE_VLM_CLIENT "Enable VLM HTTP client for AI verification" ON)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
@@ -461,9 +461,9 @@ set(BACKEND_SOURCES
     src/backend/spacemit/npu_inference.cpp
 )
 
-# VLM client sources (conditional)
+# VLM client sources (HTTP client + llama management, compiled into rivision_worker)
 if(USE_VLM_CLIENT)
-    set(VLM_CLIENT_SOURCES 
+    set(VLM_CLIENT_SOURCES
         src/vlm/vlm_client.cpp
         src/vlm/vlm_batch_client.cpp
         src/vlm/llama_engine.cpp
@@ -471,7 +471,7 @@ if(USE_VLM_CLIENT)
         src/vlm/vision_encoder.cpp
     )
 else()
-    set(VLM_SOURCES "")
+    set(VLM_CLIENT_SOURCES "")
 endif()
 
 # Embed sources (built-in CLIP embedding, same pattern as YOLO)
@@ -484,7 +484,7 @@ set(EMBED_SOURCES
 # =============================================================================
 add_executable(rivision_worker
     src/main.cpp
-    ${VLM_SOURCES}
+    ${VLM_CLIENT_SOURCES}
     ${EMBED_SOURCES}
     ${CORE_SOURCES}
     ${CORE_HEADERS}
@@ -567,73 +567,40 @@ if(ONNXRUNTIME_FOUND)
 endif()
 
 # =============================================================================
-# VLM standalone executable (optional, BUILD_VLM=OFF by default)
-# Enable with: cmake .. -DBUILD_VLM=ON
-# Source layout uses vlm_service.cpp as entry point (replaces old main_vlm.cpp)
+# BUILD_VLM — 将 VLM 服务端源码编译进 rivision_worker（无独立可执行文件）
+# VLM 源文件均无 main()，属于 worker 内嵌功能，不是独立服务进程
 # =============================================================================
 if(BUILD_VLM)
-    set(VLM_SOURCES
+    # 额外 VLM 服务端源文件（与 VLM_CLIENT_SOURCES 互补）
+    set(VLM_FULL_SOURCES
         src/vlm/vlm_service.cpp
-        src/vlm/llama_engine.cpp
-        src/vlm/llama_server_manager.cpp
         src/vlm/description_generator.cpp
         src/vlm/unified_vlm_search.cpp
-        src/vlm/vision_encoder.cpp
-        src/vlm/vlm_batch_client.cpp
     )
-
-    set(VLM_HEADERS
-        src/vlm/vlm_service.h
-        src/vlm/llama_engine.h
-        src/vlm/llama_server_manager.h
-        src/vlm/description_generator.h
-        src/vlm/unified_vlm_search.h
-        src/vlm/vision_encoder.h
-        src/vlm/vlm_client.h
-        src/vlm/vlm_batch_client.h
-        src/vlm/prompt_template.h
-    )
-
-    # Verify all VLM sources exist before declaring target
-    set(_VLM_OK TRUE)
-    foreach(_f ${VLM_SOURCES})
+    # 检查文件存在性（缺失时 WARNING 不 FATAL）
+    foreach(_f ${VLM_FULL_SOURCES})
         if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_f}")
-            message(WARNING "BUILD_VLM=ON but source missing: ${_f} — skipping rivision_vlm")
-            set(_VLM_OK FALSE)
-            break()
+            message(WARNING "BUILD_VLM=ON but missing: ${_f}  — skipping that file")
+            list(REMOVE_ITEM VLM_FULL_SOURCES "${_f}")
         endif()
     endforeach()
 
-    if(_VLM_OK)
-    add_executable(rivision_vlm
-        ${VLM_SOURCES}
-        ${VLM_HEADERS}
-        src/utils/logger.cpp
-        src/utils/color_cvt.cpp
-    )
+    if(VLM_FULL_SOURCES)
+        target_sources(rivision_worker PRIVATE ${VLM_FULL_SOURCES})
+        message(STATUS "VLM service:  compiled into rivision_worker (${VLM_FULL_SOURCES})")
+    endif()
 
-    target_include_directories(rivision_vlm PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-    )
-
-    target_link_libraries(rivision_vlm PRIVATE
-        pthread
-        ${OpenCV_LIBS}
-    )
-
-    # llama.cpp — bundled at third_party/spacemit-llama.cpp/
+    # llama.cpp — 链接到 rivision_worker（bundled SDK）
     if(LLAMA_FOUND)
-        target_include_directories(rivision_vlm PRIVATE ${LLAMA_INCLUDE_DIR})
-        target_link_directories(rivision_vlm PRIVATE ${LLAMA_LIB_DIR})
-        target_link_libraries(rivision_vlm PRIVATE llama ggml ggml-base)
-        set_target_properties(rivision_vlm PROPERTIES
-            BUILD_RPATH  "${LLAMA_LIB_DIR}"
+        target_include_directories(rivision_worker PRIVATE ${LLAMA_INCLUDE_DIR})
+        target_link_directories(rivision_worker PRIVATE ${LLAMA_LIB_DIR})
+        target_link_libraries(rivision_worker PRIVATE llama ggml ggml-base)
+        set_target_properties(rivision_worker PROPERTIES
+            BUILD_RPATH  "${ONNXRUNTIME_LIB_DIR}:${LLAMA_LIB_DIR}"
             INSTALL_RPATH "$ORIGIN/../lib"
         )
     endif()
-    endif() # _VLM_OK
-endif() # BUILD_VLM
+endif()
 
 # =============================================================================
 # Tests
