@@ -46,7 +46,7 @@ SERVER_LDFLAGS := -s -w \
 	-X main.buildTime=$(TIMESTAMP)
 
 # === .PHONY 声明 (集中管理) ===
-.PHONY: help clean check-env check-go
+.PHONY: help clean check-env check-env-hub check-env-worker check-go
 .PHONY: release
 .PHONY: cli cli-web cli-web-build
 .PHONY: embed
@@ -58,25 +58,25 @@ SERVER_LDFLAGS := -s -w \
 .PHONY: release-server-host release-server-node
 
 # ============================================================
-# 环境预检 (check-env)
-#
-# 设计原则：
-#   - Hub 侧依赖（Go / Node / npm / libsqlite3-dev）→ 此处检查
-#   - Worker 侧依赖（OpenCV / ORT / llama / FFmpeg dev / yaml-cpp / curl / SpacemiT MPP）
-#     → 完全交给 src/rivision_worker/CMakeLists.txt 在 configure 阶段统一检查
-#   - 多节点 fleet 检查 → 不集成，需要时直接 ssh <node> 跑 cmake 即可
+# check-env-hub — Hub 侧专项检查
+#   检查: gcc(CGO) / Go≥MIN / libsqlite3-dev / Node.js(可选) / GOPROXY
+#   触发: hub, release-server-host
 # ============================================================
-check-env:
-	@echo "🔍 构建环境检查..."
+check-env-hub:
+	@echo "🔍 [hub] 构建环境检查..."
 	@ERRORS=0; \
 	echo ""; \
-	echo "  --- 工具链（hub Go + app_web Node）---"; \
+	echo "  --- 编译工具 ---"; \
+	command -v gcc >/dev/null 2>&1 && \
+		echo "  ✅ gcc $$(gcc -dumpversion)  (CGO 必需)" || { \
+		echo "  ❌ gcc 未安装 — sudo apt install -y build-essential"; \
+		ERRORS=$$((ERRORS+1)); \
+	}; \
 	if command -v go >/dev/null 2>&1; then \
 		GO_VER=$$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/^go//' | head -1); \
 		REQ="$(GO_MIN_VERSION)"; \
 		if [ -z "$$GO_VER" ]; then \
-			echo "  ❌ Go 安装异常（go version 输出无法解析）"; \
-			ERRORS=$$((ERRORS+1)); \
+			echo "  ❌ Go 安装异常（go version 无法解析）"; ERRORS=$$((ERRORS+1)); \
 		elif [ "$$(printf '%s\n%s\n' "$$REQ" "$$GO_VER" | sort -V | head -1)" != "$$REQ" ]; then \
 			echo "  ❌ Go $$GO_VER 过低，需要 >= $$REQ"; \
 			echo "     wget https://mirrors.aliyun.com/golang/go$$REQ.linux-riscv64.tar.gz"; \
@@ -86,43 +86,121 @@ check-env:
 			echo "  ✅ Go $$GO_VER"; \
 		fi; \
 	else \
-		echo "  ❌ Go 未安装（hub 编译需要 >= $(GO_MIN_VERSION)）"; \
+		echo "  ❌ Go 未安装（hub 必需，>= $(GO_MIN_VERSION)）"; \
 		echo "     wget https://mirrors.aliyun.com/golang/go$(GO_MIN_VERSION).linux-riscv64.tar.gz"; \
 		echo "     sudo tar -C /usr/local -xzf go$(GO_MIN_VERSION).linux-riscv64.tar.gz"; \
 		ERRORS=$$((ERRORS+1)); \
 	fi; \
-	if command -v node >/dev/null 2>&1; then \
-		echo "  ✅ Node.js $$(node --version)"; \
-	else \
-		echo "  ⚠️  Node.js 未安装（app_web 前端构建需要）"; \
-		echo "     sudo apt install -y nodejs npm"; \
-	fi; \
-	if dpkg -s libsqlite3-dev >/dev/null 2>&1; then \
-		echo "  ✅ libsqlite3-dev（hub CGO sqlite 必需）"; \
-	else \
-		echo "  ❌ libsqlite3-dev 未安装"; \
-		echo "     sudo apt install -y libsqlite3-dev"; \
+	dpkg -s libsqlite3-dev >/dev/null 2>&1 && \
+		echo "  ✅ libsqlite3-dev" || { \
+		echo "  ❌ libsqlite3-dev 未安装 — sudo apt install -y libsqlite3-dev"; \
 		ERRORS=$$((ERRORS+1)); \
-	fi; \
+	}; \
+	echo ""; \
+	echo "  --- 可选（app_web） ---"; \
+	command -v node >/dev/null 2>&1 && \
+		echo "  ✅ Node.js $$(node --version) / npm $$(npm --version)" || \
+		echo "  ⚠️  Node.js/npm 未安装（仅 app_web 需要）— sudo apt install -y nodejs npm"; \
 	echo ""; \
 	echo "  --- 网络 ---"; \
 	PROXY_URL=$$(echo "$${GOPROXY}" | cut -d, -f1); \
-	if curl -sf --connect-timeout 5 "$$PROXY_URL" >/dev/null 2>&1; then \
-		echo "  ✅ GOPROXY 可达 ($$PROXY_URL)"; \
-	else \
-		echo "  ⚠️  GOPROXY ($$PROXY_URL) 不可达，会尝试备用源"; \
-	fi; \
+	curl -sf --connect-timeout 5 "$$PROXY_URL" >/dev/null 2>&1 && \
+		echo "  ✅ GOPROXY 可达 ($$PROXY_URL)" || \
+		echo "  ⚠️  GOPROXY ($$PROXY_URL) 不可达，将尝试备用源"; \
 	echo ""; \
 	if [ $$ERRORS -gt 0 ]; then \
-		echo "  ❌ Hub 侧发现 $$ERRORS 个缺失项，请先按上述提示修复"; \
-		echo ""; \
-		exit 1; \
+		echo "  ❌ Hub 侧 $$ERRORS 个缺失项，修复后再执行 make hub"; exit 1; \
 	fi; \
-	echo "  ✅ 环境检查通过（worker 依赖将在 cmake 配置时自动安装）"
+	echo "  ✅ Hub 侧检查通过"
 	@echo ""
 
+# ============================================================
+# check-env-worker — Worker 侧专项检查（自动 apt 安装缺失包）
+#   检查: gcc/g++/cmake/make / apt 包（自动安装）/
+#         OpenCV(/opt/opencv-spacemit) / bundled SDK(third_party/)
+#         /dev/mpp /dev/npu（仅信息，不阻塞）
+#   触发: worker, release-server-node
+# ============================================================
+_WORKER_APT := libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev \
+               libavformat-dev libavcodec-dev libavutil-dev \
+               libswresample-dev libswscale-dev
+_WORKER_SRC := $(CURDIR)/../src/rivision_worker
+
+check-env-worker:
+	@echo "🔍 [worker] 构建环境检查..."
+	@ERRORS=0; \
+	echo ""; \
+	echo "  --- 编译工具链 ---"; \
+	for tool in gcc g++ cmake make; do \
+		command -v $$tool >/dev/null 2>&1 && { \
+			v=$$($$tool --version 2>&1 | head -1); printf "  ✅ %-8s %s\n" $$tool "$$v"; \
+		} || { printf "  ❌ %-8s 未安装\n" $$tool; ERRORS=$$((ERRORS+1)); }; \
+	done; \
+	if [ $$ERRORS -gt 0 ]; then \
+		echo "  修复: sudo apt install -y build-essential cmake"; exit 1; \
+	fi; \
+	echo ""; \
+	echo "  --- apt 开发包（自动安装缺失项） ---"; \
+	MISSING_APT=""; \
+	for pkg in $(_WORKER_APT); do \
+		dpkg -s $$pkg >/dev/null 2>&1 && \
+			printf "  ✅ %s\n" $$pkg || { \
+			printf "  ⚠️  %-36s→ 将自动安装\n" $$pkg; \
+			MISSING_APT="$$MISSING_APT $$pkg"; \
+		}; \
+	done; \
+	if [ -n "$$MISSING_APT" ]; then \
+		echo ""; \
+		echo "  → sudo apt install -y $$MISSING_APT"; \
+		sudo apt-get update -qq 2>&1 | tail -1; \
+		sudo apt-get install -y -q $$MISSING_APT 2>&1 | \
+			grep -v "^Reading\|^Building\|^Hit\|^Get\|^Ign\|^Fetched" | tail -5; \
+		echo "  ✅ apt 安装完成"; \
+	fi; \
+	echo ""; \
+	echo "  --- OpenCV (SpacemiT) ---"; \
+	_CV_CFG=/opt/opencv-spacemit/lib/cmake/opencv4/OpenCVConfig.cmake; \
+	if [ -f "$$_CV_CFG" ]; then \
+		CV_VER=$$(grep -m1 'OpenCV_VERSION ' /opt/opencv-spacemit/lib/cmake/opencv4/OpenCVConfig-version.cmake 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1); \
+		echo "  ✅ /opt/opencv-spacemit  (OpenCV $${CV_VER:-?})"; \
+	else \
+		echo "  ❌ /opt/opencv-spacemit 未找到（需从 SpacemiT 获取并安装到该路径）"; \
+		ERRORS=$$((ERRORS+1)); \
+	fi; \
+	echo ""; \
+	echo "  --- Bundled SDK 完整性 (third_party/) ---"; \
+	SDK_ERR=0; \
+	check_file() { \
+		if [ -e "$$1" ]; then printf "  ✅ %s\n" "$$2"; \
+		else printf "  ❌ %s  缺失: %s\n" "$$2" "$$1"; SDK_ERR=$$(($$SDK_ERR+1)); fi; \
+	}; \
+	check_file "$(_WORKER_SRC)/third_party/spacemit-ort/include/onnxruntime_cxx_api.h" "ORT headers"; \
+	check_file "$(_WORKER_SRC)/third_party/spacemit-ort/lib/libonnxruntime.so" "libonnxruntime.so"; \
+	check_file "$(_WORKER_SRC)/third_party/spacemit-ort/lib/libspacemit_ep.so" "libspacemit_ep.so"; \
+	check_file "$(_WORKER_SRC)/third_party/spacemit-llama.cpp/include/llama.h" "llama headers"; \
+	check_file "$(_WORKER_SRC)/third_party/spacemit-llama.cpp/lib/libllama.so" "libllama.so"; \
+	check_file "$(_WORKER_SRC)/third_party/mpp/include/sys/sys_api.h" "MPP headers"; \
+	check_file "$(_WORKER_SRC)/third_party/mpp/lib/libmpp_demux.a" "libmpp_demux.a"; \
+	if [ $$SDK_ERR -gt 0 ]; then \
+		echo "  ❌ $$SDK_ERR 个 bundled SDK 文件缺失（请从 SpacemiT 获取 tar.gz 并解压到 third_party/）"; \
+		ERRORS=$$((ERRORS+$$SDK_ERR)); \
+	fi; \
+	echo ""; \
+	echo "  --- 运行时设备（仅信息，build 不需要）---"; \
+	[ -e /dev/mpp ] && echo "  ✅ /dev/mpp" || echo "  ℹ️  /dev/mpp 不存在（运行时才需要）"; \
+	[ -e /dev/npu ] && echo "  ✅ /dev/npu" || echo "  ℹ️  /dev/npu 不存在（运行时才需要）"; \
+	echo ""; \
+	if [ $$ERRORS -gt 0 ]; then \
+		echo "  ❌ Worker 侧 $$ERRORS 个问题，修复后再执行 make worker"; exit 1; \
+	fi; \
+	echo "  ✅ Worker 侧检查通过"
+	@echo ""
+
+# check-env = 全量检查（两侧都跑）
+check-env: check-env-hub check-env-worker
+
 # 兼容旧目标名
-check-go: check-env
+check-go: check-env-hub
 
 # ============================================================
 # 完整发布 (Release)
@@ -394,7 +472,7 @@ zlm:
 # 单组件构建: Hub (Go, K3 native)
 # ============================================================
 
-hub: check-env
+hub: check-env-hub
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════╗"
 	@echo "║  📦 Building rivision_hub                                     ║"
@@ -433,7 +511,7 @@ hub: check-env
 # 单组件构建: Worker (C++, K3 native, built-in YOLO+VLM)
 # ============================================================
 
-worker:
+worker: check-env-worker
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════╗"
 	@echo "║  📦 Building rivision_worker (C++)                            ║"
@@ -444,11 +522,6 @@ worker:
 	@echo ""
 	@COMP_DIR=$(CURDIR)/dist/rivision_worker; \
 	mkdir -p $$COMP_DIR/bin $$COMP_DIR/config $$COMP_DIR/services $$COMP_DIR/lib $$COMP_DIR/models; \
-	echo "[0/4] Installing worker build dependencies (apt)..."; \
-	sudo apt-get install -y -q \
-		libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev \
-		libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
-		2>&1 | grep -v "^Reading\|^Building\|^Hit\|^Get\|^Fetched" | tail -3 || true; \
 	echo "[1/4] Building C++ binary..."; \
 	cd $(CURDIR)/../src/rivision_worker && \
 		mkdir -p build && cd build && \
@@ -473,7 +546,7 @@ worker:
 # 输出: dist/<VERSION>/riscv64/server-host/
 # ============================================================
 
-release-server-host: check-env
+release-server-host: check-env-hub
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════╗"
 	@echo "║  🚀 Server Host: hub + gateway + owl + app_web                ║"
@@ -524,7 +597,7 @@ release-server-host: check-env
 #     OWL+ZLM 在 worker_owl 模式下需要 (GB28181 同子网场景)
 # ============================================================
 
-release-server-node:
+release-server-node: check-env-worker
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════════╗"
 	@echo "║  🚀 Server Node: worker + embed + go2rtc + owl                ║"
@@ -532,12 +605,6 @@ release-server-node:
 	@echo "  Version:  $(VERSION)"
 	@echo "  Platform: riscv64 (K3 native)"
 	@echo "  Note:     C++ Worker has built-in YOLO+VLM inference"
-	@echo ""
-	@echo "[0/4] Installing worker build dependencies (apt)..."
-	@sudo apt-get install -y -q \
-		libyaml-cpp-dev libsqlite3-dev libcurl4-openssl-dev \
-		libavformat-dev libavcodec-dev libavutil-dev libswresample-dev libswscale-dev \
-		2>&1 | grep -v "^Reading\|^Building\|^Hit\|^Get\|^Fetched" | tail -5 || true
 	@echo ""
 	@DIST_BASE=$(CURDIR)/../dist/$(VERSION)/riscv64 && \
 	NODE_DIR=$$DIST_BASE/server-node && \
